@@ -2,6 +2,7 @@ import sys
 import requests
 import ecdsa
 import os
+import base64
 
 BUTTONS = ['0', '1'] #Add more options when needed
 
@@ -23,12 +24,13 @@ def generate_keys(NODE_PORT):
     private_key = signing_key.to_string().hex()  # private key in hex
     verification_key = signing_key.get_verifying_key()  # verification key
     public_key = verification_key.to_string().hex()
+    public_key = base64.b64encode(bytes.fromhex(public_key))
 
     storage_path = 'wallet_client/secrets_storage'
     create_folder(storage_path)
     create_folder(f'{storage_path}/secret_{NODE_PORT}')
     with open(f'{storage_path}/secret_{NODE_PORT}/pub_key', "w") as f:
-        f.write(F'{public_key}')
+        f.write(F'{public_key.decode()}')
     with open(f'{storage_path}/secret_{NODE_PORT}/priv_key', "w") as f:
         f.write(F'{private_key}')
 

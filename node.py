@@ -33,8 +33,26 @@ def pub_list():
         print(f"Set public list")
         return "Ok", 200
 
+@node.route('/message', methods=['POST'])
+def message():
+    if request.method == 'POST':
+        params = request.get_json()
+        if validate_signature(params['from'], params['signature'], params['message']):
+            print('--------------------------------------')
+            print(f"FROM: {params['from']}")
+            print(f"Message:\n {params['message']}")
+            print('--------------------------------------')
+            return "Ok", 200 
+        else:
+            return "Bad signature", 400
+
+
+
 def validate_signature(public_key, signature, message):
     public_key = (base64.b64decode(public_key)).hex()
+    print('--------------------------------------')
+    print(public_key)
+    print('--------------------------------------')
     signature = base64.b64decode(signature)
     verifying_key = ecdsa.VerifyingKey.from_string(bytes.fromhex(public_key), curve=ecdsa.SECP256k1)
     try:
