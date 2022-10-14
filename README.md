@@ -13,6 +13,14 @@ To run node:
 Node is used to mine and process transactions. To simulate simple peer-to-peer network you can run couple Nodes on different ports.
 Each node will use Wallet to generate and store keys on start up.
 
+## Node client
+
+To run node client:
+
+`python node_client.py port_number` - change `port_number` to the port number of a running Node e.g. 5001
+
+Node Client is used to simulate actions of a Node (for example sending requests to other Nodes).
+
 ## Wallet
 
 To run wallet:
