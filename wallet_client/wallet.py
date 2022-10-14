@@ -24,11 +24,12 @@ def generate_keys(NODE_PORT):
     verification_key = signing_key.get_verifying_key()  # verification key
     public_key = verification_key.to_string().hex()
 
-    create_folder(f'secrets_storage')
-    create_folder(f'secrets_storage/secret_{NODE_PORT}')
-    with open(f'secrets_storage/secret_{NODE_PORT}/pub_key', "w") as f:
+    storage_path = 'wallet_client/secrets_storage'
+    create_folder(storage_path)
+    create_folder(f'{storage_path}/secret_{NODE_PORT}')
+    with open(f'{storage_path}/secret_{NODE_PORT}/pub_key', "w") as f:
         f.write(F'{public_key}')
-    with open(f'secrets_storage/secret_{NODE_PORT}/priv_key', "w") as f:
+    with open(f'{storage_path}/secret_{NODE_PORT}/priv_key', "w") as f:
         f.write(F'{private_key}')
 
     print('=========================================')

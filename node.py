@@ -1,6 +1,6 @@
 from flask import Flask, request
 import sys
-import wallet
+import wallet_client.wallet as wallet
 
 node = Flask(__name__)
 
