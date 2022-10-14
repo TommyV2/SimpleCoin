@@ -24,6 +24,15 @@ def pub_key():
         print(f"Got public key from {params['from']}")
         return "Ok", 200
 
+@node.route('/pub_list', methods=['POST'])
+def pub_list():
+    if request.method == 'POST':
+        params = request.get_json()
+        global public_keys_list
+        public_keys_list = params['list']
+        print(f"Set public list")
+        return "Ok", 200
+
 def validate_signature(public_key, signature, message):
     public_key = (base64.b64decode(public_key)).hex()
     signature = base64.b64decode(signature)

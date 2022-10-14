@@ -3,11 +3,11 @@ import requests
 import ecdsa
 import os
 
-buttons = ['0', '1'] #Add more options when needed
+BUTTONS = ['0', '1'] #Add more options when needed
 
 def run_wallet(NODE_PORT):
     key_input = None
-    while key_input not in buttons:
+    while key_input not in BUTTONS:
         key_input = input("""
         0. Quit
         1. Generate new wallet
@@ -35,6 +35,12 @@ def generate_keys(NODE_PORT):
     print('=========================================')
     print('New keys generated in the "secret" folder')
     print('=========================================')
+
+def get_pub_key(port):
+    storage_path = 'wallet_client/secrets_storage'
+    with open(f'{storage_path}/secret_{port}/pub_key', "r") as f:
+        pub_key = f.read()
+    return pub_key
 
 def create_folder(path):
     exists = os.path.exists(path)
