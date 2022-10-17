@@ -1,3 +1,4 @@
 Flask
 ecdsa
 requests
+cryptography

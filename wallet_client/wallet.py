@@ -3,6 +3,7 @@ import os
 import sys
 
 import ecdsa
+from cryptography.fernet import Fernet
 
 # import requests
 
@@ -28,8 +29,42 @@ class Wallet:
             self.generate_keys()
             self.run_wallet()
 
+    def key_write(self, key, key_name):
+        with open(key_name, "wb") as mykey:
+            mykey.write(key)
+
+    def key_load(self, key_name):
+        with open(key_name, "rb") as mykey:
+            key = mykey.read()
+        return key
+
+    def file_encrypt(self, key, original_file, encrypted_file):
+
+        f = Fernet(key)
+
+        with open(original_file, "rb") as file:
+            original = file.read()
+
+        encrypted = f.encrypt(original)
+
+        with open(encrypted_file, "wb") as file:
+            file.write(encrypted)
+
+    def file_decrypt(self, key, encrypted_file, decrypted_file):
+
+        f = Fernet(key)
+
+        with open(encrypted_file, "rb") as file:
+            encrypted = file.read()
+
+        decrypted = f.decrypt(encrypted)
+
+        with open(decrypted_file, "wb") as file:
+            file.write(decrypted)
+
     # To generate public and private key using ECDSA with SECP256k1 curve
     def generate_keys(self):
+        encryption_key = Fernet.generate_key()
         signing_key = ecdsa.SigningKey.generate(curve=ecdsa.SECP256k1)  # signing key
         private_key = signing_key.to_string().hex()  # private key in hex
         verification_key = signing_key.get_verifying_key()  # verification key
@@ -39,10 +74,14 @@ class Wallet:
         storage_path = "wallet_client/secrets_storage"
         self.create_folder(storage_path)
         self.create_folder(f"{storage_path}/secret_{self.NODE_PORT}")
-        with open(f"{storage_path}/secret_{self.NODE_PORT}/pub_key", "w") as f:
+        path = f"{storage_path}/secret_{self.NODE_PORT}"
+        self.key_write(encryption_key, f"{path}/encryption_key")
+        with open(f"{path}/pub_key", "w") as f:
             f.write(f"{public_key.decode()}")
-        with open(f"{storage_path}/secret_{self.NODE_PORT}/priv_key", "w") as f:
+        with open(f"{path}/priv_key", "w") as f:
             f.write(f"{private_key}")
+        self.file_encrypt(encryption_key, f"{path}/priv_key", f"{path}/enc_priv_key")
+        os.remove(f"{path}/priv_key")
 
         print("=========================================")
         print('New keys generated in the "secret" folder')
