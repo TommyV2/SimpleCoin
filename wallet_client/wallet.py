@@ -29,39 +29,6 @@ class Wallet:
             self.generate_keys()
             self.run_wallet()
 
-    def key_write(self, key, key_name):
-        with open(key_name, "wb") as mykey:
-            mykey.write(key)
-
-    def key_load(self, key_name):
-        with open(key_name, "rb") as mykey:
-            key = mykey.read()
-        return key
-
-    def file_encrypt(self, key, original_file, encrypted_file):
-
-        f = Fernet(key)
-
-        with open(original_file, "rb") as file:
-            original = file.read()
-
-        encrypted = f.encrypt(original)
-
-        with open(encrypted_file, "wb") as file:
-            file.write(encrypted)
-
-    def file_decrypt(self, key, encrypted_file, decrypted_file):
-
-        f = Fernet(key)
-
-        with open(encrypted_file, "rb") as file:
-            encrypted = file.read()
-
-        decrypted = f.decrypt(encrypted)
-
-        with open(decrypted_file, "wb") as file:
-            file.write(decrypted)
-
     # To generate public and private key using ECDSA with SECP256k1 curve
     def generate_keys(self):
         encryption_key = Fernet.generate_key()
@@ -85,17 +52,39 @@ class Wallet:
 
         print("=========================================")
         print('New keys generated in the "secret" folder')
+        print("This is your private key:")
+        print("=========================================")
+        print(private_key)
         print("=========================================")
 
-    # Get public key for Node with chosen port
-    def get_pub_key(self, port):
-        storage_path = "wallet_client/secrets_storage"
-        with open(f"{storage_path}/secret_{port}/pub_key", "r") as f:
-            pub_key = f.read()
-
-        return pub_key
-
     # Helper Wallet methods
+
+    def key_write(self, key, key_name):
+        with open(key_name, "wb") as mykey:
+            mykey.write(key)
+
+    def key_load(self, port, key_name):
+        with open(f"wallet_client/secrets_storage/secret_{port}/{key_name}", "r") as mykey:
+            key = mykey.read()
+        return key
+
+    def file_encrypt(self, key, original_file, encrypted_file):
+        f = Fernet(key)
+        with open(original_file, "rb") as file:
+            original = file.read()
+
+        encrypted = f.encrypt(original)
+        with open(encrypted_file, "wb") as file:
+            file.write(encrypted)
+          
+    def file_decrypt(self, key, encrypted_file, decrypted_file):
+        f = Fernet(key)
+        with open(encrypted_file, "rb") as file:
+            encrypted = file.read()
+
+        decrypted = f.decrypt(encrypted)
+        with open(decrypted_file, "wb") as file:
+            file.write(decrypted)
 
     def create_folder(self, path):
         exists = os.path.exists(path)

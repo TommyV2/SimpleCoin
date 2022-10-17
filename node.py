@@ -13,7 +13,6 @@ node = Flask(__name__)
 PORT = 0
 public_keys_list = []
 
-
 # Server methods
 # [GET] - returns public_keys_list
 # [POST] - recieves public_key of a sender and saves it in its public_keys_list
@@ -70,7 +69,7 @@ def validate_signature(public_key, signature, message):
     )
     try:
         return verifying_key.verify(signature, message.encode())
-    except verifying_key.Error:
+    except:
         logging.error("Could not verify signature")
         return False
 
@@ -88,7 +87,7 @@ if __name__ == "__main__":
     PORT = sys.argv[1]
     wallet = Wallet(PORT)
     wallet.generate_keys()
-    my_pub_key = wallet.get_pub_key(PORT)
+    my_pub_key = wallet.key_load(PORT, "pub_key")
     add_pub_key_to_the_list(PORT, my_pub_key)
 
     # Start server

@@ -27,7 +27,7 @@ class NodeClient:
 
     # Send public key from Node A to Node B
     def send_pub_key(self, destination_port):
-        pub_key = self.wallet.get_pub_key(NODE_PORT)
+        pub_key = self.wallet.key_load(NODE_PORT, "pub_key")
         url = f"http://localhost:{destination_port}/pub_key"
         payload = {
             "from": NODE_PORT,
@@ -65,11 +65,12 @@ class NodeClient:
 
     # Send message from Node A to Node B
     def send_message(self, destination_port, private_key, message):
-        pub_key = self.wallet.get_pub_key(NODE_PORT)
+        pub_key = self.wallet.key_load(NODE_PORT, "pub_key")
         signature, message = self.sign_ECDSA_msg(private_key, message)
         url = f"http://localhost:{destination_port}/message"
         payload = {"from": pub_key, "signature": signature.decode(), "message": message}
         headers = {"Content-Type": "application/json"}
+        print(payload)
         res = requests.post(url, json=payload, headers=headers)
         print("=========================================")
         print("RESPONSE:")
