@@ -70,7 +70,6 @@ class NodeClient:
         url = f"http://localhost:{destination_port}/message"
         payload = {"from": pub_key, "signature": signature.decode(), "message": message}
         headers = {"Content-Type": "application/json"}
-        print(payload)
         res = requests.post(url, json=payload, headers=headers)
         print("=========================================")
         print("RESPONSE:")
