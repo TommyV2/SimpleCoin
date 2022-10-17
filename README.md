@@ -29,5 +29,3 @@ To run wallet:
 
 Wallet stores secret keys for all Nodes, we treat it as an external storage, normally it would be different app.
 We can use it to send transactions between Nodes.
-
-
