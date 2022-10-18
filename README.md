@@ -1,5 +1,9 @@
 # SimpleCoin
 
+## Authors
+Oleksandr Krasnyi
+Tomasz Stańczuk
+
 ## Installation
 
 `pip install -r requirements.txt`
