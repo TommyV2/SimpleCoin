@@ -5,8 +5,6 @@ from flask import Flask, request
 
 import wallet_client.wallet as wallet_client
 import messanger as msg
-import atexit
-
 
 
 node = Flask(__name__)
@@ -84,7 +82,7 @@ if __name__ == "__main__":
     my_priv_key = wallet.key_load(PORT, "enc_priv_key")
     add_pub_key_to_the_list(PORT, my_pub_key)
 
-    
+    # Start Messanger TODO: maybe start it via node_client whenever we want
     messanger = msg.Messanger(my_priv_key, []) # TODO change [] to all ports in the network
     messanger_thread = threading.Thread(target=lambda: messanger.start())
     messanger_thread.daemon = True

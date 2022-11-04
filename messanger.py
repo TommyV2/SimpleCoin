@@ -6,7 +6,7 @@ import requests
 class Messanger:
     def __init__(self, signature, ports):
         self.signature = signature
-        self.ports = ports
+        self.ports = ["5003"] # all known hosts - TODO: should be passed in the constructor
 
     # Adding random message to the blockchain
     def add_message_to_the_transaction_pool(self):
@@ -16,11 +16,12 @@ class Messanger:
             "timestamp": time_stamp
         }
         message_json = json.dumps(message)
-
-        url = f"http://localhost:{5003}/update_transaction_pool" # TODO change to sending to all nodes in the pool
         payload = {"message": message_json}
         headers = {"Content-Type": "application/json"}
-        res = requests.post(url, json=payload, headers=headers)
+
+        for port in self.ports:
+            url = f"http://localhost:{port}/update_transaction_pool"
+            res = requests.post(url, json=payload, headers=headers)
 
     def start(self):
         while True:
