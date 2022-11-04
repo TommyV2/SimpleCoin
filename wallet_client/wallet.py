@@ -1,6 +1,7 @@
 import base64
 import os
 import sys
+import logging
 
 import ecdsa
 from cryptography.fernet import Fernet
@@ -90,7 +91,22 @@ class Wallet:
         exists = os.path.exists(path)
         if not exists:
             os.mkdir(path)
-
+    
+# Validate if signature is correct
+def validate_signature(public_key, signature, message):
+    public_key = (base64.b64decode(public_key)).hex()
+    print("--------------------------------------")
+    print(public_key)
+    print("--------------------------------------")
+    signature = base64.b64decode(signature)
+    verifying_key = ecdsa.VerifyingKey.from_string(
+        bytes.fromhex(public_key), curve=ecdsa.SECP256k1
+    )
+    try:
+        return verifying_key.verify(signature, message.encode())
+    except:
+        logging.error("Could not verify signature")
+        return False
 
 # Start Wallet for chosen Node
 if __name__ == "__main__":

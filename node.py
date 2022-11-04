@@ -1,17 +1,16 @@
-import base64
-import logging
-
-# import json, requests
 import sys
+import threading
 
-import ecdsa
 from flask import Flask, request
 
-from wallet_client.wallet import Wallet
+import wallet_client.wallet as wallet_client
+import messanger as msg
+
 
 node = Flask(__name__)
 PORT = 0
 public_keys_list = []
+transaction_pool = []
 
 # Server methods
 # [GET] - returns public_keys_list
@@ -38,12 +37,12 @@ def pub_list():
         return "Ok", 200
 
 
-# [POST] - resieves new message from sender, uses public key to verify signature
+# [POST] - recieves new message from sender, uses public key to verify signature
 @node.route("/message", methods=["POST"])
 def message():
     if request.method == "POST":
         params = request.get_json()
-        if validate_signature(params["from"], params["signature"], params["message"]):
+        if wallet_client.validate_signature(params["from"], params["signature"], params["message"]):
             print("=========================================")
             print("MESSAGE")
             print(f"FROM: {params['from']}")
@@ -54,27 +53,20 @@ def message():
         else:
             return "Bad signature", 404
 
+# [POST] - update transaction pool
+@node.route("/update_transaction_pool", methods=["POST"])
+def update_transaction_pool():
+    if request.method == "POST":
+        params = request.get_json()
+        message = params["message"]
+        print(f"New message in the transaction pool")
+        print("=========================================")
+        print(message)
+        print("=========================================")
+        transaction_pool.append(message)
+        return "Ok", 200
 
-# Helper functions
-
-# Validate if signature is correct
-def validate_signature(public_key, signature, message):
-    public_key = (base64.b64decode(public_key)).hex()
-    print("--------------------------------------")
-    print(public_key)
-    print("--------------------------------------")
-    signature = base64.b64decode(signature)
-    verifying_key = ecdsa.VerifyingKey.from_string(
-        bytes.fromhex(public_key), curve=ecdsa.SECP256k1
-    )
-    try:
-        return verifying_key.verify(signature, message.encode())
-    except:
-        logging.error("Could not verify signature")
-        return False
-
-
-# Add new publick key to the public_keys_list
+# Add new public key to the public_keys_list
 def add_pub_key_to_the_list(host, pub_key):
     for item in public_keys_list:
         port, key = item
@@ -82,16 +74,22 @@ def add_pub_key_to_the_list(host, pub_key):
             return
     public_keys_list.append((host, pub_key))
 
-
 if __name__ == "__main__":
     PORT = sys.argv[1]
-    wallet = Wallet(PORT)
+    wallet = wallet_client.Wallet(PORT)
     wallet.generate_keys()
     my_pub_key = wallet.key_load(PORT, "pub_key")
+    my_priv_key = wallet.key_load(PORT, "enc_priv_key")
     add_pub_key_to_the_list(PORT, my_pub_key)
+
+    # Start Messanger TODO: maybe start it via node_client whenever we want
+    messanger = msg.Messanger(my_priv_key, []) # TODO change [] to all ports in the network
+    messanger_thread = threading.Thread(target=lambda: messanger.start())
+    messanger_thread.daemon = True
+    messanger_thread.start()
 
     # Start server
     print("=========================================")
     print(f"Running Node on port: {PORT}")
     print("=========================================")
-    node.run(debug=True, port=PORT)
+    node.run(port=PORT, debug=True)
