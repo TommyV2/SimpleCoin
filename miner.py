@@ -73,7 +73,7 @@ def start_mining(blockchain):
         # we fake a block of transactions - just a string
         previous_block = blockchain[i]
         previous_hash = previous_block["hash"]
-        data = "test block with transactions"
+        data = "test block with transactions" # TODO: change to all pending transactions from transaction_pool
         new_block = data + previous_hash
         # find a valid nonce for the new block
         (hash_result, nonce) = proof_of_work(new_block, i)
@@ -98,8 +98,11 @@ def is_valid_blockchain(blockchain):
             return False
     return True
 
+
+# Just for debugging (remove later)
+
 # save_blockchain([create_genesis_block()])
-BLOCKCHAIN = get_blockchain()
+# BLOCKCHAIN = get_blockchain()
 # start_mining(BLOCKCHAIN)
-print(is_valid_blockchain(BLOCKCHAIN))
+# print(is_valid_blockchain(BLOCKCHAIN))
 
