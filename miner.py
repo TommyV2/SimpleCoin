@@ -88,7 +88,18 @@ def start_mining(blockchain):
             hash_power = float(nonce / elapsed_time)
             print("Hashing Power: %ld hashes per second" % hash_power)
 
-save_blockchain([create_genesis_block()])
+def is_valid_blockchain(blockchain):
+    for block in blockchain:
+        index = block["index"]
+        expected_hash = block["hash"]
+        calculated_hash = hashlib.sha256(str(block["data"]).encode("utf-8") + str(block["nonce"]).encode("utf-8") + str(block["previous_hash"]).encode("utf-8")).hexdigest()
+        if calculated_hash != expected_hash:
+            print(f"Error in block #{index}")
+            return False
+    return True
+
+# save_blockchain([create_genesis_block()])
 BLOCKCHAIN = get_blockchain()
-start_mining(BLOCKCHAIN)
+# start_mining(BLOCKCHAIN)
+print(is_valid_blockchain(BLOCKCHAIN))
 
