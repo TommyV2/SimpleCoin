@@ -5,12 +5,14 @@ from flask import Flask, request
 
 import wallet_client.wallet as wallet_client
 import messanger as msg
+import miner
 
 
 node = Flask(__name__)
 PORT = 0
 public_keys_list = []
 transaction_pool = []
+
 
 # Server methods
 # [GET] - returns public_keys_list
@@ -87,6 +89,10 @@ if __name__ == "__main__":
     messanger_thread = threading.Thread(target=lambda: messanger.start())
     messanger_thread.daemon = True
     messanger_thread.start()
+
+    # Init blockchain
+    BLOCKCHAIN = [miner.create_genesis_block()]
+    miner.save_blockchain(BLOCKCHAIN)
 
     # Start server
     print("=========================================")
