@@ -83,26 +83,50 @@ def get_transaction_pool(destination_port):
     return data
 
 
+def check_if_new_block_added(destination_port):
+    url = f"http://localhost:{destination_port}/new_block_added"
+    res = requests.get(url)
+    data = res.json()
+    return data
+
+
+def post_new_block_added(destination_port, status):
+    url = f"http://localhost:{destination_port}/new_block_added"
+    payload = {
+        f"{status}",
+    }
+    headers = {"Content-Type": "application/json"}
+    requests.post(url, json=payload, headers=headers)
+
+
+def update_block_added_on_all_nodes(pub_list):
+    for host in pub_list:
+        port, pub = host
+        post_new_block_added(port, "True")
+
+
 def pop_transaction_pool(destination_port):
     url = f"http://localhost:{destination_port}/update_transaction_pool"
     requests.delete(url)
 
 
-def start_mining(blockchain, PORT):
+def start_mining(blockchain, PORT, pub_list):
     # difficulty from 0 to 24 bits
     for i in range(24):
         difficulty = 2**i
         print(f"Difficulty: {difficulty} ({i})")
         print("Starting search...")
+        if check_if_new_block_added(PORT) == "True":
+            post_new_block_added(PORT, "False")
+            start_mining_instance(PORT, pub_list)
         # checkpoint the current time
         start_time = time.time()
         # make a new block which includes the hash from the previous block
         # we fake a block of transactions - just a string
         previous_block = blockchain[i]
         previous_hash = previous_block["hash"]
-
         while not get_transaction_pool(PORT):
-            time.sleep(5)
+            time.sleep(1)
         data = str(get_transaction_pool(PORT).pop(0))
         pop_transaction_pool(PORT)
         new_block = data + previous_hash
@@ -110,7 +134,7 @@ def start_mining(blockchain, PORT):
         (hash_result, nonce) = proof_of_work(new_block, i)
         new_block = Block(i + 1, data, nonce, previous_hash)
         add_new_block_to_the_blockchain(blockchain, new_block)
-        # TODO send message to other nodes
+        update_block_added_on_all_nodes(pub_list, "True")
         # checkpoint how long it took to find a result
         end_time = time.time()
         elapsed_time = end_time - start_time
@@ -143,13 +167,13 @@ def is_valid_blockchain(blockchain):
     return True
 
 
-def start_mining_instance(PORT):
+def start_mining_instance(PORT, pub_list):
     if os.path.isfile("blockchain.json"):
-        start_mining(get_blockchain(), PORT)
+        start_mining(get_blockchain(), PORT, pub_list)
     else:
         BLOCKCHAIN = [create_genesis_block()]
         save_blockchain(BLOCKCHAIN)
-        start_mining(BLOCKCHAIN)
+        start_mining(BLOCKCHAIN, PORT, pub_list)
 
 
 # Just for debugging (remove later)

@@ -16,6 +16,7 @@ transaction_pool = [
     {"signature": "my_priv_key", "timestamp": 1667876435.8473322},
 ]
 mining = False
+new_block_added_bool = False
 
 
 # Server methods
@@ -51,7 +52,8 @@ def mining():
         print(params)
         global mining
         mining = params["Mining"]
-        miner.start_mining_instance(PORT)
+        global public_keys_list
+        miner.start_mining_instance(PORT, public_keys_list)
         print("Starting mining")
         return "Ok", 200
 
@@ -75,7 +77,7 @@ def message():
             return "Bad signature", 404
 
 
-# [POST] - update transaction pool
+# [GET, POST, DELETE] - update transaction pool
 @node.route("/update_transaction_pool", methods=["GET", "POST", "DELETE"])
 def update_transaction_pool():
     if request.method == "GET":
@@ -88,6 +90,22 @@ def update_transaction_pool():
         print(message)
         print("=========================================")
         transaction_pool.append(message)
+        return "Ok", 200
+    if request.method == "DELETE":
+        transaction_pool.pop(0)
+        return "", 204
+
+
+# [POST] - update transaction pool
+@node.route("/new_block_added", methods=["GET", "POST"])
+def new_block_added(new_block_added_bo):
+    if request.method == "GET":
+        global new_block_added_bool
+        new_block_added_bool = new_block_added_bo
+        return new_block_added_bool
+    if request.method == "POST":
+        params = request.get_json()
+        new_block_added_bool = params
         return "Ok", 200
     if request.method == "DELETE":
         transaction_pool.pop(0)
