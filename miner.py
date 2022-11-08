@@ -89,7 +89,7 @@ def pop_transaction_pool(destination_port):
     requests.delete(url)
 
 
-def start_mining(blockchain, PORT):
+def start_mining(blockchain, PORT): # TODO: start mining on all nodes
     # difficulty from 0 to 24 bits
     for i in range(24):
         difficulty = 2**i
@@ -104,7 +104,8 @@ def start_mining(blockchain, PORT):
 
         while not get_transaction_pool(PORT):
             time.sleep(5)
-        data = str(get_transaction_pool(PORT).pop(0))
+        transaction_pool = get_transaction_pool(PORT)
+        data = str(transaction_pool)
         pop_transaction_pool(PORT)
         new_block = data + previous_hash
         # find a valid nonce for the new block
@@ -150,7 +151,7 @@ def start_mining_instance(PORT):
     else:
         BLOCKCHAIN = [create_genesis_block()]
         save_blockchain(BLOCKCHAIN)
-        start_mining(BLOCKCHAIN)
+        start_mining(BLOCKCHAIN, PORT)
 
 
 # Just for debugging (remove later)

@@ -11,11 +11,7 @@ import wallet_client.wallet as wallet_client
 node = Flask(__name__)
 PORT = 0
 public_keys_list = []
-transaction_pool = [
-    {"signature": "my_priv_key", "timestamp": 1667876405.7358031},
-    {"signature": "my_priv_key", "timestamp": 1667876421.7888396},
-    {"signature": "my_priv_key", "timestamp": 1667876435.8473322},
-]
+transaction_pool = []
 mining = False
 
 
@@ -81,6 +77,7 @@ def message():
 # [POST] - update transaction pool
 @node.route("/update_transaction_pool", methods=["GET", "POST", "DELETE"])
 def update_transaction_pool():
+    global transaction_pool
     if request.method == "GET":
         return {"transaction_pool": transaction_pool}
     if request.method == "POST":
@@ -93,7 +90,7 @@ def update_transaction_pool():
         transaction_pool.append(message)
         return "Ok", 200
     if request.method == "DELETE":
-        transaction_pool.pop(0)
+        transaction_pool = []
         return "", 204
 
 

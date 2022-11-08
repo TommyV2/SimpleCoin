@@ -166,7 +166,7 @@ class NodeClient:
             my_priv_key = self.wallet.key_load(NODE_PORT, "enc_priv_key")
             current_active_nodes_ports = [item[0] for item in self.pub_list]
             current_active_nodes_keys = [item[1] for item in self.pub_list]
-            print(f"messaging to these hosts {current_active_nodes_keys}")
+            print(f"messaging to these hosts {current_active_nodes_ports}")
             messanger = msg.Messanger(my_priv_key, current_active_nodes_ports)
             messanger_thread = threading.Thread(target=lambda: messanger.start())
             messanger_thread.daemon = True
@@ -190,4 +190,5 @@ if __name__ == "__main__":
     print("=========================================")
     print(f"Running Client for Node: {NODE_PORT}")
     print("=========================================")
+    node_client.get_pub_list(NODE_PORT)
     node_client.run_client()

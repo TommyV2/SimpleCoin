@@ -25,6 +25,6 @@ class Messanger:
 
     def start(self):
         while True:
-            random_interval = random.randint(10, 30)
+            random_interval = random.randint(5, 10)
             time.sleep(random_interval)
             self.add_message_to_the_transaction_pool()
