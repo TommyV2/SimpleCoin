@@ -1,6 +1,7 @@
 import os
 import sys
 
+import requests
 from flask import Flask, request
 
 import miner
@@ -9,7 +10,11 @@ import wallet_client.wallet as wallet_client
 node = Flask(__name__)
 PORT = 0
 public_keys_list = []
-transaction_pool = []
+transaction_pool = [
+    {"signature": "my_priv_key", "timestamp": 1667876405.7358031},
+    {"signature": "my_priv_key", "timestamp": 1667876421.7888396},
+    {"signature": "my_priv_key", "timestamp": 1667876435.8473322},
+]
 mining = False
 
 
@@ -46,7 +51,7 @@ def mining():
         print(params)
         global mining
         mining = params["Mining"]
-        miner.start_mining_instance()
+        miner.start_mining_instance(PORT)
         print("Starting mining")
         return "Ok", 200
 
@@ -71,8 +76,10 @@ def message():
 
 
 # [POST] - update transaction pool
-@node.route("/update_transaction_pool", methods=["POST"])
+@node.route("/update_transaction_pool", methods=["GET", "POST", "DELETE"])
 def update_transaction_pool():
+    if request.method == "GET":
+        return transaction_pool
     if request.method == "POST":
         params = request.get_json()
         message = params["message"]
@@ -82,6 +89,9 @@ def update_transaction_pool():
         print("=========================================")
         transaction_pool.append(message)
         return "Ok", 200
+    if request.method == "DELETE":
+        transaction_pool.pop(0)
+        return "", 204
 
 
 # Add new public key to the public_keys_list
@@ -108,6 +118,16 @@ if __name__ == "__main__":
     my_pub_key = wallet.key_load(PORT, "pub_key")
     my_priv_key = wallet.key_load(PORT, "enc_priv_key")
     add_pub_key_to_the_list(PORT, my_pub_key)
+    if PORT == "5001":
+        pass
+    else:
+        url = "http://localhost:5001/pub_key"
+        payload = {
+            "from": PORT,
+            "pub_key": my_pub_key,
+        }
+        headers = {"Content-Type": "application/json"}
+        requests.post(url, json=payload, headers=headers)
 
     # Start server
     print("=========================================")

@@ -1,6 +1,9 @@
 import hashlib
 import json
+import os
 import time
+
+import requests
 
 
 class Block:
@@ -73,7 +76,19 @@ def proof_of_work(header, difficulty_bits):
     return nonce
 
 
-def start_mining(blockchain):
+def get_transaction_pool(destination_port):
+    url = f"http://localhost:{destination_port}/update_transaction_pool"
+    res = requests.get(url)
+    data = res.json()
+    return data
+
+
+def pop_transaction_pool(destination_port):
+    url = f"http://localhost:{destination_port}/update_transaction_pool"
+    requests.delete(url)
+
+
+def start_mining(blockchain, PORT):
     # difficulty from 0 to 24 bits
     for i in range(24):
         difficulty = 2**i
@@ -85,7 +100,11 @@ def start_mining(blockchain):
         # we fake a block of transactions - just a string
         previous_block = blockchain[i]
         previous_hash = previous_block["hash"]
-        data = "test block with transactions"  # TODO: change to all pending transactions from transaction_pool
+
+        while not get_transaction_pool(PORT):
+            time.sleep(5)
+        data = str(get_transaction_pool(PORT).pop(0))
+        pop_transaction_pool(PORT)
         new_block = data + previous_hash
         # find a valid nonce for the new block
         (hash_result, nonce) = proof_of_work(new_block, i)
@@ -103,8 +122,14 @@ def start_mining(blockchain):
 
 
 def is_valid_blockchain(blockchain):
+    max_index = 0
     for block in blockchain:
         index = block["index"]
+        if max_index < index:
+            max_index = index
+        elif max_index > index:
+            print(f"Error new index {index} less than max index")
+            return False
         expected_hash = block["hash"]
         calculated_hash = hashlib.sha256(
             str(block["data"]).encode("utf-8")
@@ -114,12 +139,13 @@ def is_valid_blockchain(blockchain):
         if calculated_hash != expected_hash:
             print(f"Error in block #{index}")
             return False
+
     return True
 
 
-def start_mining_instance():
-    if get_blockchain():
-        start_mining(get_blockchain())
+def start_mining_instance(PORT):
+    if os.path.isfile("blockchain.json"):
+        start_mining(get_blockchain(), PORT)
     else:
         BLOCKCHAIN = [create_genesis_block()]
         save_blockchain(BLOCKCHAIN)

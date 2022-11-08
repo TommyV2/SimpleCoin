@@ -168,6 +168,7 @@ class NodeClient:
             current_active_nodes_keys = [item[1] for item in self.pub_list]
             print(f"messaging to these hosts {current_active_nodes_keys}")
             messanger = msg.Messanger(my_priv_key, current_active_nodes_ports)
+            messanger.start()
             messanger_thread = threading.Thread(target=lambda: messanger.start())
             messanger_thread.daemon = True
             messanger_thread.start()
