@@ -89,7 +89,7 @@ def pop_transaction_pool(destination_port):
     requests.delete(url)
 
 
-def start_mining(blockchain, PORT):
+def start_mining(blockchain, PORT): # TODO: start mining on all nodes
     # difficulty from 0 to 24 bits
     for i in range(24):
         difficulty = 2**i
