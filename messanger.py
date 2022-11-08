@@ -13,9 +13,9 @@ class Messanger:
     # Adding random message to the transaction pool
     def add_message_to_the_transaction_pool(self):
         time_stamp = time.time()
-        message = {"signature": self.signature, "timestamp": time_stamp}
+        encoded_signature = self.signature.decode()
+        message = {"signature": encoded_signature, "timestamp": time_stamp}
         message_json = json.dumps(message)
-        print(message_json)
         payload = {"message": message_json}
         headers = {"Content-Type": "application/json"}
 

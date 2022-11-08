@@ -1,5 +1,6 @@
 import os
 import sys
+import threading
 
 import requests
 from flask import Flask, request
@@ -50,8 +51,10 @@ def mining():
         params = request.get_json()
         print(params)
         global mining
-        mining = params["Mining"]
-        miner.start_mining_instance(PORT)
+        mining = params["Mining"] 
+        miner_thread = threading.Thread(target=lambda: miner.start_mining_instance(PORT))
+        miner_thread.daemon = True
+        miner_thread.start()
         print("Starting mining")
         return "Ok", 200
 
@@ -79,7 +82,7 @@ def message():
 @node.route("/update_transaction_pool", methods=["GET", "POST", "DELETE"])
 def update_transaction_pool():
     if request.method == "GET":
-        return transaction_pool
+        return {"transaction_pool": transaction_pool}
     if request.method == "POST":
         params = request.get_json()
         message = params["message"]

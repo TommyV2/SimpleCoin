@@ -80,7 +80,8 @@ def get_transaction_pool(destination_port):
     url = f"http://localhost:{destination_port}/update_transaction_pool"
     res = requests.get(url)
     data = res.json()
-    return data
+    transaction_pool = data["transaction_pool"]
+    return transaction_pool
 
 
 def pop_transaction_pool(destination_port):
