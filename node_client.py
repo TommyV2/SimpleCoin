@@ -1,13 +1,16 @@
 import base64
 import sys
+import threading
 
 import ecdsa
 import requests
 
+import messanger as msg
+import miner
 from wallet_client.wallet import Wallet
 
 
-# Treat it as a helper programm, it's only used to demonstarte how does our newtwork work
+# Treat it as a helper program, it's only used to demonstrate how does our network work
 class NodeClient:
     def __init__(self, port):
         self.NODE_PORT = port  # Port of a node we run this wallet for
@@ -19,6 +22,10 @@ class NodeClient:
             "4",
             "5",
             "6",
+            "7",
+            "8",
+            "9",
+            "a",
         ]  # Add more options when needed
         self.pub_list = []
         self.wallet = Wallet(port)  # Connect to the wallet of chosen Node
@@ -58,6 +65,22 @@ class NodeClient:
         for host in self.pub_list:
             port, pub = host
             self.set_pub_list(port)
+
+    # Start mining on chosen Node
+    def start_mining(self, destination_port):
+        url = f"http://localhost:{destination_port}/mining"
+        payload = {
+            "Mining": "True",
+        }
+        headers = {"Content-Type": "application/json"}
+        requests.post(url, json=payload, headers=headers)
+
+    # Start mining all known Nodes from Node A
+    def start_mining_on_all_nodes(self):
+        for host in self.pub_list:
+            port, pub = host
+            self.start_mining(port)
+        return self.pub_list
 
     # Print public key list
     def print_pub_list(self):
@@ -99,6 +122,10 @@ class NodeClient:
             4. Set public key list
             5. Update known hosts with new list
             6. Send message to another Host
+            7. Validation of blockchain
+            8. Start messanger
+            9. Start mining on one node
+            a. Start mining on all nodes
             """
             )
         if key_input == "0":
@@ -128,6 +155,31 @@ class NodeClient:
             print("=========================================")
             print("...")
             self.send_message(destination_port, private_key, message)
+            self.run_client()
+        elif key_input == "7":
+            if miner.get_blockchain():
+                print(miner.is_valid_blockchain(miner.get_blockchain()))
+            else:
+                print("No blockchain created yet")
+            self.run_client()
+        elif key_input == "8":
+            my_priv_key = self.wallet.key_load(NODE_PORT, "enc_priv_key")
+            current_active_nodes_ports = [item[0] for item in self.pub_list]
+            current_active_nodes_keys = [item[1] for item in self.pub_list]
+            print(f"messaging to these hosts {current_active_nodes_keys}")
+            messanger = msg.Messanger(my_priv_key, current_active_nodes_ports)
+            messanger_thread = threading.Thread(target=lambda: messanger.start())
+            messanger_thread.daemon = True
+            messanger_thread.start()
+            print(f"messenger started on {NODE_PORT}")
+            self.run_client()
+        elif key_input == "9":
+            destination_port = input("Provide destination port: ")
+            self.start_mining(destination_port)
+            self.run_client()
+        elif key_input == "a":
+            miners = self.start_mining_on_all_nodes()
+            print(f"Mining started on these hosts {miners}")
             self.run_client()
 
 
