@@ -1,7 +1,7 @@
 import base64
+import logging
 import os
 import sys
-import logging
 
 import ecdsa
 from cryptography.fernet import Fernet
@@ -27,8 +27,17 @@ class Wallet:
         if key_input == "0":
             quit()
         elif key_input == "1":
-            self.generate_keys()
-            self.run_wallet()
+            keylist = ["enc_priv_key", "encryption_key", "pub_key"]
+            if all(
+                os.path.exists(
+                    f"wallet_client/secrets_storage/secret_{self.NODE_PORT}/{file}"
+                )
+                for file in keylist
+            ):
+                self.run_wallet()
+            else:
+                self.generate_keys()
+                self.run_wallet()
 
     # To generate public and private key using ECDSA with SECP256k1 curve
     def generate_keys(self):
@@ -65,8 +74,20 @@ class Wallet:
             mykey.write(key)
 
     def key_load(self, port, key_name):
-        with open(f"wallet_client/secrets_storage/secret_{port}/{key_name}", "r") as mykey:
-            key = mykey.read()
+        if key_name == "enc_priv_key":
+            with open(
+                f"wallet_client/secrets_storage/secret_{port}/encryption_key", "r"
+            ) as mykey:
+                encryption_key = mykey.read()
+                key = self.file_decrypt_to_string(
+                    encryption_key,
+                    f"wallet_client/secrets_storage/secret_{port}/enc_priv_key",
+                )
+        else:
+            with open(
+                f"wallet_client/secrets_storage/secret_{port}/{key_name}", "r"
+            ) as mykey:
+                key = mykey.read()
         return key
 
     def file_encrypt(self, key, original_file, encrypted_file):
@@ -77,7 +98,7 @@ class Wallet:
         encrypted = f.encrypt(original)
         with open(encrypted_file, "wb") as file:
             file.write(encrypted)
-          
+
     def file_decrypt(self, key, encrypted_file, decrypted_file):
         f = Fernet(key)
         with open(encrypted_file, "rb") as file:
@@ -87,11 +108,20 @@ class Wallet:
         with open(decrypted_file, "wb") as file:
             file.write(decrypted)
 
+    def file_decrypt_to_string(self, key, encrypted_file):
+        f = Fernet(key)
+        with open(encrypted_file, "rb") as file:
+            encrypted = file.read()
+
+        decrypted = f.decrypt(encrypted)
+        return decrypted
+
     def create_folder(self, path):
         exists = os.path.exists(path)
         if not exists:
             os.mkdir(path)
-    
+
+
 # Validate if signature is correct
 def validate_signature(public_key, signature, message):
     public_key = (base64.b64decode(public_key)).hex()
@@ -104,9 +134,10 @@ def validate_signature(public_key, signature, message):
     )
     try:
         return verifying_key.verify(signature, message.encode())
-    except:
+    except Exception:
         logging.error("Could not verify signature")
         return False
+
 
 # Start Wallet for chosen Node
 if __name__ == "__main__":

@@ -12,28 +12,35 @@ class Block:
         self.hash = self.hash_block()
 
     def hash_block(self):
-        hash = hashlib.sha256(str(self.data).encode("utf-8") + str(self.nonce).encode("utf-8") + str(self.previous_hash).encode("utf-8")).hexdigest()
+        hash = hashlib.sha256(
+            str(self.data).encode("utf-8")
+            + str(self.nonce).encode("utf-8")
+            + str(self.previous_hash).encode("utf-8")
+        ).hexdigest()
 
         return hash
-    
+
     def describe(self):
         block = {
             "index": self.index,
             "data": self.data,
             "nonce": self.nonce,
             "previous_hash": self.previous_hash,
-            "hash": self.hash
+            "hash": self.hash,
         }
 
         return block
 
+
 def create_genesis_block():
-    return Block(index = 0, data = "genesis", nonce = 0, previous_hash="0")
+    return Block(index=0, data="genesis", nonce=0, previous_hash="0")
+
 
 def save_blockchain(blockchain):
     blockchain_json = list(map(lambda block: block.describe(), blockchain))
     with open("blockchain.json", "w") as f:
-        json.dump(blockchain_json, f, indent = 4)
+        json.dump(blockchain_json, f, indent=4)
+
 
 def get_blockchain():
     with open("blockchain.json") as json_file:
@@ -41,18 +48,22 @@ def get_blockchain():
 
     return blockchain
 
+
 def add_new_block_to_the_blockchain(blockchain, block):
     block_json = block.describe()
     blockchain.append(block_json)
     with open("blockchain.json", "w") as f:
-        json.dump(blockchain, f, indent = 4)
+        json.dump(blockchain, f, indent=4)
+
 
 def proof_of_work(header, difficulty_bits):
     # calculate the difficulty target
-    target = 2 ** (256-difficulty_bits)
-    max_nonce = 2 ** 32 # 4 billion
+    target = 2 ** (256 - difficulty_bits)
+    max_nonce = 2**32  # 4 billion
     for nonce in range(max_nonce):
-        hash_result = hashlib.sha256(str(header).encode("utf-8") + str(nonce).encode("utf-8")).hexdigest()
+        hash_result = hashlib.sha256(
+            str(header).encode("utf-8") + str(nonce).encode("utf-8")
+        ).hexdigest()
         # check if this is a valid result, below the target
         if int(hash_result, 16) < target:
             print(f"Success with nonce {nonce}")
@@ -61,10 +72,11 @@ def proof_of_work(header, difficulty_bits):
     print(f"Failed after {nonce} tries")
     return nonce
 
+
 def start_mining(blockchain):
     # difficulty from 0 to 24 bits
     for i in range(24):
-        difficulty = 2 ** i
+        difficulty = 2**i
         print(f"Difficulty: {difficulty} ({i})")
         print("Starting search...")
         # checkpoint the current time
@@ -73,12 +85,13 @@ def start_mining(blockchain):
         # we fake a block of transactions - just a string
         previous_block = blockchain[i]
         previous_hash = previous_block["hash"]
-        data = "test block with transactions" # TODO: change to all pending transactions from transaction_pool
+        data = "test block with transactions"  # TODO: change to all pending transactions from transaction_pool
         new_block = data + previous_hash
         # find a valid nonce for the new block
         (hash_result, nonce) = proof_of_work(new_block, i)
-        new_block = Block(i+1, data, nonce, previous_hash)
-        add_new_block_to_the_blockchain(blockchain, new_block)  
+        new_block = Block(i + 1, data, nonce, previous_hash)
+        add_new_block_to_the_blockchain(blockchain, new_block)
+        # TODO send message to other nodes
         # checkpoint how long it took to find a result
         end_time = time.time()
         elapsed_time = end_time - start_time
@@ -88,15 +101,29 @@ def start_mining(blockchain):
             hash_power = float(nonce / elapsed_time)
             print("Hashing Power: %ld hashes per second" % hash_power)
 
+
 def is_valid_blockchain(blockchain):
     for block in blockchain:
         index = block["index"]
         expected_hash = block["hash"]
-        calculated_hash = hashlib.sha256(str(block["data"]).encode("utf-8") + str(block["nonce"]).encode("utf-8") + str(block["previous_hash"]).encode("utf-8")).hexdigest()
+        calculated_hash = hashlib.sha256(
+            str(block["data"]).encode("utf-8")
+            + str(block["nonce"]).encode("utf-8")
+            + str(block["previous_hash"]).encode("utf-8")
+        ).hexdigest()
         if calculated_hash != expected_hash:
             print(f"Error in block #{index}")
             return False
     return True
+
+
+def start_mining_instance():
+    if get_blockchain():
+        start_mining(get_blockchain())
+    else:
+        BLOCKCHAIN = [create_genesis_block()]
+        save_blockchain(BLOCKCHAIN)
+        start_mining(BLOCKCHAIN)
 
 
 # Just for debugging (remove later)
@@ -105,4 +132,3 @@ def is_valid_blockchain(blockchain):
 # BLOCKCHAIN = get_blockchain()
 # start_mining(BLOCKCHAIN)
 # print(is_valid_blockchain(BLOCKCHAIN))
-

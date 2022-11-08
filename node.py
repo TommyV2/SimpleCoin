@@ -1,17 +1,16 @@
+import os
 import sys
-import threading
 
 from flask import Flask, request
 
-import wallet_client.wallet as wallet_client
-import messanger as msg
 import miner
-
+import wallet_client.wallet as wallet_client
 
 node = Flask(__name__)
 PORT = 0
 public_keys_list = []
 transaction_pool = []
+mining = False
 
 
 # Server methods
@@ -39,12 +38,27 @@ def pub_list():
         return "Ok", 200
 
 
+# [POST] - starts mining
+@node.route("/mining", methods=["POST"])
+def mining():
+    if request.method == "POST":
+        params = request.get_json()
+        print(params)
+        global mining
+        mining = params["Mining"]
+        miner.start_mining_instance()
+        print("Starting mining")
+        return "Ok", 200
+
+
 # [POST] - recieves new message from sender, uses public key to verify signature
 @node.route("/message", methods=["POST"])
 def message():
     if request.method == "POST":
         params = request.get_json()
-        if wallet_client.validate_signature(params["from"], params["signature"], params["message"]):
+        if wallet_client.validate_signature(
+            params["from"], params["signature"], params["message"]
+        ):
             print("=========================================")
             print("MESSAGE")
             print(f"FROM: {params['from']}")
@@ -55,18 +69,20 @@ def message():
         else:
             return "Bad signature", 404
 
+
 # [POST] - update transaction pool
 @node.route("/update_transaction_pool", methods=["POST"])
 def update_transaction_pool():
     if request.method == "POST":
         params = request.get_json()
         message = params["message"]
-        print(f"New message in the transaction pool")
+        print("New message in the transaction pool")
         print("=========================================")
         print(message)
         print("=========================================")
         transaction_pool.append(message)
         return "Ok", 200
+
 
 # Add new public key to the public_keys_list
 def add_pub_key_to_the_list(host, pub_key):
@@ -76,23 +92,22 @@ def add_pub_key_to_the_list(host, pub_key):
             return
     public_keys_list.append((host, pub_key))
 
+
 if __name__ == "__main__":
     PORT = sys.argv[1]
     wallet = wallet_client.Wallet(PORT)
-    wallet.generate_keys()
+    keylist = ["enc_priv_key", "encryption_key", "pub_key"]
+    if all(
+        os.path.exists(f"wallet_client/secrets_storage/secret_{PORT}/{file}")
+        for file in keylist
+    ):
+        print("Keys already created, resuming node...")
+        pass
+    else:
+        wallet.generate_keys()
     my_pub_key = wallet.key_load(PORT, "pub_key")
     my_priv_key = wallet.key_load(PORT, "enc_priv_key")
     add_pub_key_to_the_list(PORT, my_pub_key)
-
-    # Start Messanger TODO: maybe start it via node_client whenever we want
-    messanger = msg.Messanger(my_priv_key, []) # TODO change [] to all ports in the network
-    messanger_thread = threading.Thread(target=lambda: messanger.start())
-    messanger_thread.daemon = True
-    messanger_thread.start()
-
-    # Init blockchain
-    BLOCKCHAIN = [miner.create_genesis_block()]
-    miner.save_blockchain(BLOCKCHAIN)
 
     # Start server
     print("=========================================")
