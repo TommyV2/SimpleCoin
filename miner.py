@@ -67,9 +67,8 @@ class Miner:
         url = f"http://localhost:{self.port}/update_transaction_pool"
         requests.delete(url)
 
-    # def stop_mining()
 
-
+    #TODO only 1st block mines, because it starts before everyone else
     def start_mining(self): # TODO: start mining on all nodes
         # difficulty from 0 to 24 bits
         self.mining = True
