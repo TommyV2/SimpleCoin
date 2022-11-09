@@ -45,7 +45,6 @@ def pub_list():
 def mining():
     if request.method == "POST":
         params = request.get_json()
-        print(params)
         global mining
         mining = params["Mining"] 
         miner_thread = threading.Thread(target=lambda: miner.start_mining_instance(PORT))
