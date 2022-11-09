@@ -33,3 +33,11 @@ To run wallet:
 
 Wallet stores secret keys for all Nodes, we treat it as an external storage, normally it would be different app.
 We can use it to send transactions between Nodes.
+
+
+TODO
+1. for verification, 3 blocks must already exist.
+2. new block must be added after decision from other nodes, the node that created hash does not participate in voting. (not sure if needed for this sprint, rather not needed)
+3. all nodes must have it's own blockchain in seperate files.
+4. difficulty bits - zmienna globalna dla wszystkich node'ow
+5. add hash of last block for validation.
