@@ -30,8 +30,12 @@ class Miner:
         block_json = block.describe()
         blockchain = get_blockchain()
         blockchain.append(block_json)
-        with open("blockchain.json", "w") as f:
-            json.dump(blockchain, f, indent=4)
+        if is_valid_blockchain(blockchain):
+            with open("blockchain.json", "w") as f:
+                json.dump(blockchain, f, indent=4)
+        else:
+            mined_index = block.index
+            print(f"Block #{mined_index} was already mined!")
 
 
     def proof_of_work(self, header, difficulty_bits):
