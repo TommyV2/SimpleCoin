@@ -81,7 +81,8 @@ class NodeClient:
         for host in self.pub_list:
             port, pub = host
             self.start_mining(port)
-        return self.pub_list
+        current_active_nodes_ports = [item[0] for item in self.pub_list]
+        return current_active_nodes_ports
     
     # Stop mining on chosen Node
     def stop_mining(self, destination_port):

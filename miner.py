@@ -1,11 +1,14 @@
 import hashlib
 import json
 import os
+import random
 import time
 import requests
 
 from block import Block
+from colorama import Fore, Style, init
 
+init(convert=True)
 
 class Miner:
 
@@ -25,6 +28,12 @@ class Miner:
             json.dump(blockchain_json, f, indent=4)
         self.blockchain = get_blockchain()
 
+    def network_delay(self):
+        if random.uniform(0, 100) < 0.1:
+            random_delay_time = random.randint(0, 3)
+            print(f"DELAY: {random_delay_time}s")
+            time.sleep(random_delay_time)
+
 
     def add_new_block_to_the_blockchain(self, block):
         block_json = block.describe()
@@ -33,6 +42,7 @@ class Miner:
         if is_valid_blockchain(blockchain):
             with open("blockchain.json", "w") as f:
                 json.dump(blockchain, f, indent=4)
+            print(f"{Fore.GREEN}Node {self.port} mined a new block!{Style.RESET_ALL}")
         else:
             mined_index = block.index
             print(f"Block #{mined_index} was already mined!")
@@ -40,9 +50,13 @@ class Miner:
 
     def proof_of_work(self, header, difficulty_bits):
         # calculate the difficulty target
-        target = 2 ** (256 - difficulty_bits)
-        max_nonce = 2**32  # 4 billion
+        # target = 2 ** (256 - difficulty_bits)
+        target = 2 ** 248
+        max_nonce = 2**32
+       
         for nonce in range(max_nonce):
+            # random delays so that not only the first block can mine
+            self.network_delay()
             hash_result = hashlib.sha256(
                 str(header).encode("utf-8") + str(nonce).encode("utf-8")
             ).hexdigest()
@@ -72,7 +86,7 @@ class Miner:
     def start_mining(self): # TODO: start mining on all nodes
         # difficulty from 0 to 24 bits
         self.mining = True
-        difficulty = 2**5 # modify if needed 
+        difficulty = 2**7 # modify if needed 
         while(self.mining):
             print("Starting search...")
             # checkpoint the current time
