@@ -5,15 +5,15 @@ import threading
 import requests
 from flask import Flask, request
 
-import miner
 import wallet_client.wallet as wallet_client
+
+from miner import Miner, start_mining_instance
 
 node = Flask(__name__)
 PORT = 0
 public_keys_list = []
 transaction_pool = []
-mining = False
-
+miner = None
 
 # Server methods
 # [GET] - returns public_keys_list
@@ -45,12 +45,15 @@ def pub_list():
 def mining():
     if request.method == "POST":
         params = request.get_json()
-        global mining
-        mining = params["Mining"] 
-        miner_thread = threading.Thread(target=lambda: miner.start_mining_instance(PORT))
-        miner_thread.daemon = True
-        miner_thread.start()
-        print("Starting mining")
+        mining = params["mining"]
+
+        if mining == "True":
+            miner_thread = threading.Thread(target=lambda: start_mining_instance(miner))
+            miner_thread.daemon = True
+            miner_thread.start()
+            print("Starting mining")
+        else:
+            miner.mining = False
         return "Ok", 200
 
 
@@ -104,6 +107,7 @@ def add_pub_key_to_the_list(host, pub_key):
 
 if __name__ == "__main__":
     PORT = sys.argv[1]
+    miner = Miner(PORT)
     wallet = wallet_client.Wallet(PORT)
     keylist = ["enc_priv_key", "encryption_key", "pub_key"]
     if all(

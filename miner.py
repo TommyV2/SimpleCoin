@@ -12,7 +12,6 @@ class Miner:
     def __init__(self, port):
         self.port = port
         self.mining = False
-        self.last_block_index = 0
         self.blockchain = get_blockchain()
 
 
@@ -29,9 +28,10 @@ class Miner:
 
     def add_new_block_to_the_blockchain(self, block):
         block_json = block.describe()
-        self.blockchain.append(block_json)
+        blockchain = get_blockchain()
+        blockchain.append(block_json)
         with open("blockchain.json", "w") as f:
-            json.dump(self.blockchain, f, indent=4)
+            json.dump(blockchain, f, indent=4)
 
 
     def proof_of_work(self, header, difficulty_bits):
@@ -75,8 +75,8 @@ class Miner:
             # checkpoint the current time
             start_time = time.time()
             # make a new block which includes the hash from the previous block
-            # we fake a block of transactions - just a string
-            previous_block = self.blockchain[self.last_block_index]
+            previous_block = get_blockchain()[-1]
+            previous_block_index = previous_block["index"]
             previous_hash = previous_block["hash"]
 
             while not self.get_transaction_pool():
@@ -86,8 +86,8 @@ class Miner:
             self.pop_transaction_pool()
             new_block = data + previous_hash
             # find a valid nonce for the new block
-            (hash_result, nonce) = self.proof_of_work(new_block, self.last_block_index )
-            new_block = Block(self.last_block_index  + 1, data, nonce, previous_hash)
+            (hash_result, nonce) = self.proof_of_work(new_block, previous_block_index )
+            new_block = Block(previous_block_index  + 1, data, nonce, previous_hash)
 
             self.add_new_block_to_the_blockchain(new_block)
             # TODO send message to other nodes
@@ -99,7 +99,7 @@ class Miner:
                 # estimate the hashes per second
                 hash_power = float(nonce / elapsed_time)
                 print("Hashing Power: %ld hashes per second" % hash_power)
-            self.last_block_index += 1
+        print("Stopped mining")
 
 
 def get_blockchain():
@@ -140,12 +140,11 @@ def is_valid_blockchain(blockchain):
     return True
 
 
-def start_mining_instance(PORT):
-    miner = Miner(PORT)
+def start_mining_instance(miner):
     if os.path.isfile("blockchain.json"):
         miner.start_mining()
+        miner.blockchain = get_blockchain()
     else:
         BLOCKCHAIN = [miner.create_genesis_block()]
         miner.save_blockchain(BLOCKCHAIN)
         miner.start_mining()
-

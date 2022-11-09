@@ -1,5 +1,6 @@
 *.swp
 package-lock.json
+wallet_client/secrets_storage/
 __pycache__
 .pytest_cache
 .env
@@ -7,3 +8,4 @@ __pycache__
 .idea
 *.egg-info
 .vscode
+blockchain.json
