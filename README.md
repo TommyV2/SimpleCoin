@@ -36,7 +36,7 @@ We can use it to send transactions between Nodes.
 
 
 TODO
-1. for verification, 3 blocks must already exist.
+1. for verification, 3 blocks must already exist in initial blockchain file.
 2. new block must be added after decision from other nodes, the node that created hash does not participate in voting. (not sure if needed for this sprint, rather not needed)
 3. all nodes must have it's own blockchain in seperate files.
 4. difficulty bits - zmienna globalna dla wszystkich node'ow
