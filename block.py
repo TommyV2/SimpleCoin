@@ -8,6 +8,7 @@ class Block:
         self.previous_hash = previous_hash
         self.hash = self.hash_block()
 
+    # Calculate current hash of a block
     def hash_block(self):
         hash = hashlib.sha256(
             str(self.data).encode("utf-8")
@@ -17,6 +18,7 @@ class Block:
 
         return hash
 
+    # Get block's params in a dict
     def describe(self):
         block = {
             "index": self.index,

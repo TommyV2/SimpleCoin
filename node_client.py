@@ -169,21 +169,23 @@ class NodeClient:
             self.send_message(destination_port, private_key, message)
             self.run_client()
         elif key_input == "7":
-            if miner.get_blockchain():
-                print(miner.is_valid_blockchain(miner.get_blockchain()))
+            destination_port = input("Provide port: ")
+            if miner.get_blockchain(destination_port):
+                print(miner.is_valid_blockchain(miner.get_blockchain(destination_port))[1])
             else:
                 print("No blockchain created yet")
             self.run_client()
         elif key_input == "8":
-            my_priv_key = self.wallet.key_load(NODE_PORT, "enc_priv_key")
             current_active_nodes_ports = [item[0] for item in self.pub_list]
             current_active_nodes_keys = [item[1] for item in self.pub_list]
             print(f"messaging to these hosts {current_active_nodes_ports}")
-            messanger = msg.Messanger(my_priv_key, current_active_nodes_ports)
-            messanger_thread = threading.Thread(target=lambda: messanger.start())
-            messanger_thread.daemon = True
-            messanger_thread.start()
-            print(f"messenger started on {NODE_PORT}")
+            for port in current_active_nodes_ports:
+                priv_key = self.wallet.key_load(port, "enc_priv_key")
+                messanger = msg.Messanger(priv_key, current_active_nodes_ports)
+                messanger_thread = threading.Thread(target=lambda: messanger.start())
+                messanger_thread.daemon = True
+                messanger_thread.start()
+                print(f"messenger started on {port}")
             self.run_client()
         elif key_input == "9":
             destination_port = input("Provide destination port: ")

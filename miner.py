@@ -12,63 +12,66 @@ init(convert=True)
 
 class Miner:
 
-    def __init__(self, port):
+    def __init__(self, port, known_hosts):
         self.port = port
+        self.known_hosts = known_hosts
         self.mining = False
-        self.blockchain = get_blockchain()
+        self.blockchain = get_blockchain(port)
 
 
+    # Create genesis block (1st block of a blockchain)
     def create_genesis_block(self):
         return Block(index=0, data="genesis", nonce=0, previous_hash="0")
 
 
+    # Save Blockchain to a file 
     def save_blockchain(self, blockchain):
         blockchain_json = list(map(lambda block: block.describe(), blockchain))
-        with open("blockchain.json", "w") as f:
+        with open(f"blockchain{self.port}.json", "w") as f:
             json.dump(blockchain_json, f, indent=4)
-        self.blockchain = get_blockchain()
+        self.blockchain = get_blockchain(self.port)
 
+
+    # Get random network delay 
     def network_delay(self):
-        if random.uniform(0, 100) < 0.1:
-            random_delay_time = random.randint(0, 3)
-            print(f"DELAY: {random_delay_time}s")
+        if random.uniform(0, 100) < 40:
+            random_delay_time = random.randint(0, 10)
+            print(f"{Fore.YELLOW}DELAY: {random_delay_time}s{Style.RESET_ALL}")
             time.sleep(random_delay_time)
 
 
+    # Add candidate block to the blockchain
     def add_new_block_to_the_blockchain(self, block):
-        block_json = block.describe()
-        blockchain = get_blockchain()
-        blockchain.append(block_json)
-        if is_valid_blockchain(blockchain):
-            with open("blockchain.json", "w") as f:
+        blockchain = get_blockchain(self.port)
+        blockchain.append(block)
+        if is_valid_blockchain(blockchain)[0]:
+            with open(f"blockchain{self.port}.json", "w") as f:
                 json.dump(blockchain, f, indent=4)
             print(f"{Fore.GREEN}Node {self.port} mined a new block!{Style.RESET_ALL}")
         else:
-            mined_index = block.index
+            mined_index = block["index"]
             print(f"Block #{mined_index} was already mined!")
 
 
+    # Calculate pow for the candidate block
     def proof_of_work(self, header, difficulty_bits):
         # calculate the difficulty target
-        # target = 2 ** (256 - difficulty_bits)
-        target = 2 ** 248
+        target = 2 ** (256 - difficulty_bits)
         max_nonce = 2**32
        
         for nonce in range(max_nonce):
             # random delays so that not only the first block can mine
-            self.network_delay()
             hash_result = hashlib.sha256(
                 str(header).encode("utf-8") + str(nonce).encode("utf-8")
             ).hexdigest()
             # check if this is a valid result, below the target
             if int(hash_result, 16) < target:
-                print(f"Success with nonce {nonce}")
-                print(f"Hash is {hash_result}")
                 return (hash_result, nonce)
         print(f"Failed after {nonce} tries")
         return nonce
 
 
+    # Get pending transactions
     def get_transaction_pool(self):
         url = f"http://localhost:{self.port}/update_transaction_pool"
         res = requests.get(url)
@@ -77,22 +80,55 @@ class Miner:
         return transaction_pool
 
 
+    # Clear transaction pool
     def pop_transaction_pool(self):
         url = f"http://localhost:{self.port}/update_transaction_pool"
         requests.delete(url)
 
 
-    #TODO only 1st block mines, because it starts before everyone else
+    # Verify candidate block
+    def verify_candidate_block(self, candidate_block):
+        previous_block = get_blockchain(self.port)[-1]
+        expected_hash = candidate_block["hash"]
+        calculated_hash = hashlib.sha256(
+            str(candidate_block["data"]).encode("utf-8")
+            + str(candidate_block["nonce"]).encode("utf-8")
+            + str(candidate_block["previous_hash"]).encode("utf-8")
+        ).hexdigest()
+        if candidate_block["index"] != previous_block["index"] + 1:
+            return False
+        elif candidate_block["previous_hash"] != previous_block["hash"]:
+            return False
+        elif calculated_hash != expected_hash:
+            return False
+        else:
+            return True
+    
+    def notify_other_nodes(self, candidate_block):
+        responses = []
+        for port in self.known_hosts:
+            url = f"http://localhost:{port}/validate"
+            payload = {"candidate_block": candidate_block.describe()}
+            headers = {"Content-Type": "application/json"}
+            res = requests.post(url, json=payload, headers=headers)
+            responses.append(res.status_code)
+        if all(code is 200 for code in responses):
+            return True
+        else:
+            return False
+
+    # Start mining
     def start_mining(self): # TODO: start mining on all nodes
         # difficulty from 0 to 24 bits
         self.mining = True
-        difficulty = 2**7 # modify if needed 
+        difficulty_bits = 2**4 # modify if needed 
         while(self.mining):
             print("Starting search...")
+            self.network_delay()
             # checkpoint the current time
             start_time = time.time()
             # make a new block which includes the hash from the previous block
-            previous_block = get_blockchain()[-1]
+            previous_block = get_blockchain(self.port)[-1]
             previous_block_index = previous_block["index"]
             previous_hash = previous_block["hash"]
 
@@ -103,10 +139,12 @@ class Miner:
             self.pop_transaction_pool()
             new_block = data + previous_hash
             # find a valid nonce for the new block
-            (hash_result, nonce) = self.proof_of_work(new_block, previous_block_index )
+            (hash_result, nonce) = self.proof_of_work(new_block, difficulty_bits)
             new_block = Block(previous_block_index  + 1, data, nonce, previous_hash)
+            is_valid = self.notify_other_nodes(new_block)
 
-            self.add_new_block_to_the_blockchain(new_block)
+            if is_valid and self.mining:
+                self.add_new_block_to_the_blockchain(new_block.describe())
             # TODO send message to other nodes
             # checkpoint how long it took to find a result
             end_time = time.time()
@@ -119,9 +157,10 @@ class Miner:
         print("Stopped mining")
 
 
-def get_blockchain():
+# Get Blockchain from file
+def get_blockchain(port):
     try:
-        with open("blockchain.json") as json_file:
+        with open(f"blockchain{port}.json") as json_file:
             blockchain = json.load(json_file)
 
         return blockchain
@@ -129,15 +168,12 @@ def get_blockchain():
         return False
 
 
+# Check if blockchain is valid
 def is_valid_blockchain(blockchain):
-    max_index = 0
     for i,block in enumerate(blockchain):
         index = block["index"]
-        if max_index < index:
-            max_index = index
-        elif max_index > index:
-            print(f"Error new index {index} less than max index")
-            return False
+        if index != i:
+            return (False, f"{Fore.RED}Error wrong index in block #{i}{Style.RESET_ALL}")
         expected_hash = block["hash"]
         calculated_hash = hashlib.sha256(
             str(block["data"]).encode("utf-8")
@@ -145,22 +181,20 @@ def is_valid_blockchain(blockchain):
             + str(block["previous_hash"]).encode("utf-8")
         ).hexdigest()
         if calculated_hash != expected_hash:
-            print(f"Error in block #{index}")
-            return False
+            return (False, f"{Fore.RED}Wrong hash in block #{i}{Style.RESET_ALL}")
         if i != 0:  
             previous_hash = blockchain[i - 1]["hash"]
             current_block_previous_hash =  block["previous_hash"]
             if current_block_previous_hash != previous_hash:
-                print(f"Previous hash of block #{i} in not equal to the hash of block #{i - 1}")
-                return False
-
-    return True
+                return (False, f"{Fore.RED}Previous hash of block #{i} in not equal to the hash of block #{i - 1}{Style.RESET_ALL}")
+    return (True, f"{Fore.GREEN}Blockchain valid{Style.RESET_ALL}")
 
 
+# Start mining process on an instance
 def start_mining_instance(miner):
-    if os.path.isfile("blockchain.json"):
+    if os.path.isfile(f"blockchain{miner.port}.json"):
         miner.start_mining()
-        miner.blockchain = get_blockchain()
+        miner.blockchain = get_blockchain(miner.port)
     else:
         BLOCKCHAIN = [miner.create_genesis_block()]
         miner.save_blockchain(BLOCKCHAIN)
