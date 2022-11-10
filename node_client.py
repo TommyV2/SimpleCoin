@@ -26,6 +26,7 @@ class NodeClient:
             "8",
             "9",
             "a",
+            "q"
         ]  # Add more options when needed
         self.pub_list = []
         self.wallet = Wallet(port)  # Connect to the wallet of chosen Node
@@ -70,7 +71,7 @@ class NodeClient:
     def start_mining(self, destination_port):
         url = f"http://localhost:{destination_port}/mining"
         payload = {
-            "Mining": "True",
+            "mining": "True",
         }
         headers = {"Content-Type": "application/json"}
         requests.post(url, json=payload, headers=headers)
@@ -80,7 +81,17 @@ class NodeClient:
         for host in self.pub_list:
             port, pub = host
             self.start_mining(port)
-        return self.pub_list
+        current_active_nodes_ports = [item[0] for item in self.pub_list]
+        return current_active_nodes_ports
+    
+    # Stop mining on chosen Node
+    def stop_mining(self, destination_port):
+        url = f"http://localhost:{destination_port}/mining"
+        payload = {
+            "mining": "False",
+        }
+        headers = {"Content-Type": "application/json"}
+        requests.post(url, json=payload, headers=headers)
 
     # Print public key list
     def print_pub_list(self):
@@ -126,6 +137,7 @@ class NodeClient:
             8. Start messanger
             9. Start mining on one node
             a. Start mining on all nodes
+            q. Stop mining
             """
             )
         if key_input == "0":
@@ -180,6 +192,10 @@ class NodeClient:
         elif key_input == "a":
             miners = self.start_mining_on_all_nodes()
             print(f"Mining started on these hosts {miners}")
+            self.run_client()
+        elif key_input == "q":
+            destination_port = input("Provide destination port: ")
+            self.stop_mining(destination_port)
             self.run_client()
 
 
