@@ -16,6 +16,9 @@ class Miner:
         self.port = port
         self.known_hosts = known_hosts
         self.mining = False
+        self.restart = False
+        self.stop_minig = False
+        self.last_mined = 0
         self.blockchain = get_blockchain(port)
 
 
@@ -41,16 +44,17 @@ class Miner:
 
 
     # Add candidate block to the blockchain
-    def add_new_block_to_the_blockchain(self, block):
+    def add_new_block_to_the_blockchain(self, block, mined_by_me):
+        if time.time() - self.last_mined < 5:
+            return
         blockchain = get_blockchain(self.port)
-        blockchain.append(block)
-        if is_valid_blockchain(blockchain)[0]:
-            with open(f"blockchain{self.port}.json", "w") as f:
-                json.dump(blockchain, f, indent=4)
+        blockchain.append(block)  
+        with open(f"blockchain{self.port}.json", "w") as f:
+            json.dump(blockchain, f, indent=4)
+        self.last_mined = time.time()
+        if mined_by_me:
             print(f"{Fore.GREEN}Node {self.port} mined a new block!{Style.RESET_ALL}")
-        else:
-            mined_index = block["index"]
-            print(f"Block #{mined_index} was already mined!")
+        
 
 
     # Calculate pow for the candidate block
@@ -60,7 +64,9 @@ class Miner:
         max_nonce = 2**32
        
         for nonce in range(max_nonce):
-            # random delays so that not only the first block can mine
+            # check if mining should be stopped every 1000 nodes
+            if nonce % 1000 and self.mining == False:
+                return (0, 0)
             hash_result = hashlib.sha256(
                 str(header).encode("utf-8") + str(nonce).encode("utf-8")
             ).hexdigest()
@@ -107,6 +113,17 @@ class Miner:
     def notify_other_nodes(self, candidate_block):
         responses = []
         for port in self.known_hosts:
+            if port == self.port:
+                continue
+            url = f"http://localhost:{port}/mining"
+            payload = {
+                "mining": "False",
+            }
+            headers = {"Content-Type": "application/json"}
+            res = requests.post(url, json=payload, headers=headers)
+        for port in self.known_hosts:
+            if port == self.port:
+                continue
             url = f"http://localhost:{port}/validate"
             payload = {"candidate_block": candidate_block.describe()}
             headers = {"Content-Type": "application/json"}
@@ -121,7 +138,10 @@ class Miner:
     def start_mining(self): # TODO: start mining on all nodes
         # difficulty from 0 to 24 bits
         self.mining = True
-        difficulty_bits = 2**4 # modify if needed 
+        difficulty_bits = 2**4 + 8 # modify if needed
+        if self.stop_minig:
+            return
+
         while(self.mining):
             print("Starting search...")
             self.network_delay()
@@ -140,14 +160,19 @@ class Miner:
             new_block = data + previous_hash
             # find a valid nonce for the new block
             (hash_result, nonce) = self.proof_of_work(new_block, difficulty_bits)
+            if self.mining == False:
+                break
+            end_time = time.time()
             new_block = Block(previous_block_index  + 1, data, nonce, previous_hash)
             is_valid = self.notify_other_nodes(new_block)
-
-            if is_valid and self.mining:
-                self.add_new_block_to_the_blockchain(new_block.describe())
-            # TODO send message to other nodes
+            if is_valid: #and self.mining:
+                self.restart = True
+                self.add_new_block_to_the_blockchain(new_block.describe(), mined_by_me = True)
+            else:
+                self.restart = False
+            self.mining = False          
+  
             # checkpoint how long it took to find a result
-            end_time = time.time()
             elapsed_time = end_time - start_time
             print("Elapsed Time: %.4f seconds" % elapsed_time)
             if elapsed_time > 0:
@@ -155,6 +180,18 @@ class Miner:
                 hash_power = float(nonce / elapsed_time)
                 print("Hashing Power: %ld hashes per second" % hash_power)
         print("Stopped mining")
+
+        if self.restart:
+            print(f"{Fore.BLUE} 30 seconds until next mining starts{Style.RESET_ALL}")
+            time.sleep(30)
+            for port in self.known_hosts:
+                # Stop mining on other nodes
+                url = f"http://localhost:{port}/mining"
+                payload = {
+                    "mining": "True",
+                }
+                headers = {"Content-Type": "application/json"}
+                res = requests.post(url, json=payload, headers=headers)
 
 
 # Get Blockchain from file
@@ -193,6 +230,10 @@ def is_valid_blockchain(blockchain):
 # Start mining process on an instance
 def start_mining_instance(miner):
     if os.path.isfile(f"blockchain{miner.port}.json"):
+        (is_valid, msg) = is_valid_blockchain(get_blockchain(miner.port))  
+        if not is_valid:
+            print(msg)
+            return
         miner.start_mining()
         miner.blockchain = get_blockchain(miner.port)
     else:

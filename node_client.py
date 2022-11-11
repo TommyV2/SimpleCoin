@@ -123,6 +123,7 @@ class NodeClient:
     # Main program loop
     def run_client(self):
         key_input = None
+        current_active_nodes_ports = [item[0] for item in self.pub_list]
         while key_input not in self.BUTTONS:
             key_input = input(
                 """
@@ -137,7 +138,7 @@ class NodeClient:
             8. Start messanger
             9. Start mining on one node
             a. Start mining on all nodes
-            q. Stop mining
+            q. Stop mining on all nodes
             """
             )
         if key_input == "0":
@@ -176,8 +177,6 @@ class NodeClient:
                 print("No blockchain created yet")
             self.run_client()
         elif key_input == "8":
-            current_active_nodes_ports = [item[0] for item in self.pub_list]
-            current_active_nodes_keys = [item[1] for item in self.pub_list]
             print(f"messaging to these hosts {current_active_nodes_ports}")
             for port in current_active_nodes_ports:
                 priv_key = self.wallet.key_load(port, "enc_priv_key")
@@ -196,8 +195,8 @@ class NodeClient:
             print(f"Mining started on these hosts {miners}")
             self.run_client()
         elif key_input == "q":
-            destination_port = input("Provide destination port: ")
-            self.stop_mining(destination_port)
+            for port in current_active_nodes_ports:
+                self.stop_mining(port)
             self.run_client()
 
 

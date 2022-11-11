@@ -85,9 +85,6 @@ def update_transaction_pool():
         params = request.get_json()
         message = params["message"]
         print("New message in the transaction pool")
-        print("=========================================")
-        print(message)
-        print("=========================================")
         transaction_pool.append(message)
         return "Ok", 200
     if request.method == "DELETE":
@@ -104,7 +101,7 @@ def validate():
         is_valid = miner.verify_candidate_block(candidate_block)
 
         if is_valid:
-            miner.add_new_block_to_the_blockchain(candidate_block)
+            miner.add_new_block_to_the_blockchain(candidate_block, mined_by_me = False)
             return "Ok", 200
         else:
             return "Bad candidate block", 404
@@ -147,8 +144,8 @@ if __name__ == "__main__":
         headers = {"Content-Type": "application/json"}
         requests.post(url, json=payload, headers=headers)
 
-    ports = list(zip(*public_keys_list))[0]
-    miner = Miner(PORT, ports)
+    ports = list(zip(*public_keys_list))
+    miner = Miner(PORT, ["5001", "5002", "5003"])
     # Start server
     print("=========================================")
     print(f"Running Node on port: {PORT}")
