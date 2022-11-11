@@ -38,7 +38,7 @@ class Miner:
     # Get random network delay 
     def network_delay(self):
         if random.uniform(0, 100) < 40:
-            random_delay_time = random.randint(0, 10)
+            random_delay_time = random.randint(0, 5)
             print(f"{Fore.YELLOW}DELAY: {random_delay_time}s{Style.RESET_ALL}")
             time.sleep(random_delay_time)
 
@@ -112,6 +112,9 @@ class Miner:
     
     def notify_other_nodes(self, candidate_block):
         responses = []
+        print("@@@@@@@@@@@@@@@@")
+        print(self.known_hosts)
+        print("@@@@@@@@@@@@@@@@")
         for port in self.known_hosts:
             if port == self.port:
                 continue

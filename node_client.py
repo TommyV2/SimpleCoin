@@ -72,6 +72,7 @@ class NodeClient:
         url = f"http://localhost:{destination_port}/mining"
         payload = {
             "mining": "True",
+            "stop": "False"
         }
         headers = {"Content-Type": "application/json"}
         requests.post(url, json=payload, headers=headers)
@@ -89,6 +90,7 @@ class NodeClient:
         url = f"http://localhost:{destination_port}/mining"
         payload = {
             "mining": "False",
+            "stop": "True"
         }
         headers = {"Content-Type": "application/json"}
         requests.post(url, json=payload, headers=headers)

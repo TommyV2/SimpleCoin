@@ -46,7 +46,11 @@ def mining():
     if request.method == "POST":
         params = request.get_json()
         mining = params["mining"]
-
+        if "stop" in params:
+            if params["stop"] == "True":
+                miner.stop_minig = True
+            else:
+                miner.stop_minig = False
         if mining == "True":
             miner_thread = threading.Thread(target=lambda: start_mining_instance(miner))
             miner_thread.daemon = True
@@ -144,7 +148,6 @@ if __name__ == "__main__":
         headers = {"Content-Type": "application/json"}
         requests.post(url, json=payload, headers=headers)
 
-    ports = list(zip(*public_keys_list))
     miner = Miner(PORT, ["5001", "5002", "5003"])
     # Start server
     print("=========================================")
