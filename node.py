@@ -46,12 +46,15 @@ def mining():
     if request.method == "POST":
         params = request.get_json()
         mining = params["mining"]
-
+        if "stop" in params:
+            if params["stop"] == "True":
+                miner.stop_minig = True
+            else:
+                miner.stop_minig = False
         if mining == "True":
             miner_thread = threading.Thread(target=lambda: start_mining_instance(miner))
             miner_thread.daemon = True
             miner_thread.start()
-            print("Starting mining")
         else:
             miner.mining = False
         return "Ok", 200
@@ -86,14 +89,28 @@ def update_transaction_pool():
         params = request.get_json()
         message = params["message"]
         print("New message in the transaction pool")
-        print("=========================================")
-        print(message)
-        print("=========================================")
         transaction_pool.append(message)
         return "Ok", 200
     if request.method == "DELETE":
         transaction_pool = []
         return "", 204
+
+
+# [POST] - validate_candidate_block
+@node.route("/validate", methods=["POST"])
+def validate():
+    if request.method == "POST":
+        params = request.get_json()
+        candidate_block = params["candidate_block"]
+        is_valid = miner.verify_candidate_block(candidate_block)
+
+        if is_valid:
+            miner.add_new_block_to_the_blockchain(candidate_block, mined_by_me = False)
+            return "Ok", 200
+        else:
+            return "Bad candidate block", 404
+        
+
 
 
 # Add new public key to the public_keys_list
@@ -107,7 +124,6 @@ def add_pub_key_to_the_list(host, pub_key):
 
 if __name__ == "__main__":
     PORT = sys.argv[1]
-    miner = Miner(PORT)
     wallet = wallet_client.Wallet(PORT)
     keylist = ["enc_priv_key", "encryption_key", "pub_key"]
     if all(
@@ -132,6 +148,7 @@ if __name__ == "__main__":
         headers = {"Content-Type": "application/json"}
         requests.post(url, json=payload, headers=headers)
 
+    miner = Miner(PORT, ["5001", "5002", "5003"])
     # Start server
     print("=========================================")
     print(f"Running Node on port: {PORT}")
