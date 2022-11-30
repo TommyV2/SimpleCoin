@@ -138,6 +138,22 @@ def validate_signature(public_key, signature, message):
         logging.error("Could not verify signature")
         return False
 
+def get_balance(transaction_pool, port):
+    balance = 0
+    for transaction in transaction_pool:
+        amount = transaction["amount"]
+        if transaction["sender"] == port:
+            balance -= amount
+        elif transaction["receiver"] == port:
+            balance += amount
+    return balance
+
+def validate_new_transaction(transaction_pool, transaction, port): 
+    amount = transaction["amount"]
+    balance = get_balance(transaction_pool, port)
+    if amount <= balance:
+        return True
+    return False
 
 # Start Wallet for chosen Node
 if __name__ == "__main__":
