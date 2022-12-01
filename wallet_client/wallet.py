@@ -1,4 +1,5 @@
 import base64
+import json
 import logging
 import os
 import sys
@@ -125,9 +126,6 @@ class Wallet:
 # Validate if signature is correct
 def validate_signature(public_key, signature, message):
     public_key = (base64.b64decode(public_key)).hex()
-    print("--------------------------------------")
-    print(public_key)
-    print("--------------------------------------")
     signature = base64.b64decode(signature)
     verifying_key = ecdsa.VerifyingKey.from_string(
         bytes.fromhex(public_key), curve=ecdsa.SECP256k1
@@ -140,17 +138,22 @@ def validate_signature(public_key, signature, message):
 
 def get_balance(transaction_pool, port):
     balance = 0
+    public_key = ""
+    with open(f"wallet_client/secrets_storage/secret_{port}/pub_key", "r") as mykey:
+        public_key = mykey.read()
+        
     for transaction in transaction_pool:
         amount = transaction["amount"]
-        if transaction["sender"] == port:
+        if transaction["sender"] == public_key:
             balance -= amount
-        elif transaction["receiver"] == port:
+        elif transaction["receiver"] == public_key:
             balance += amount
     return balance
 
 def validate_new_transaction(transaction_pool, transaction, port): 
     amount = transaction["amount"]
     balance = get_balance(transaction_pool, port)
+    print(f"BALANCE: {balance}")
     if amount <= balance:
         return True
     return False

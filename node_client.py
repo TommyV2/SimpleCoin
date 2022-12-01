@@ -126,6 +126,7 @@ class NodeClient:
     def run_client(self):
         key_input = None
         current_active_nodes_ports = [item[0] for item in self.pub_list]
+        current_active_nodes_keys = [item[1] for item in self.pub_list]
         while key_input not in self.BUTTONS:
             key_input = input(
                 """
@@ -182,7 +183,8 @@ class NodeClient:
             print(f"messaging to these hosts {current_active_nodes_ports}")
             for port in current_active_nodes_ports:
                 priv_key = self.wallet.key_load(port, "enc_priv_key")
-                messanger = msg.Messanger(priv_key, current_active_nodes_ports)
+                pub_key = self.wallet.key_load(port, "pub_key")
+                messanger = msg.Messanger(priv_key, current_active_nodes_ports, pub_key, current_active_nodes_keys)
                 messanger_thread = threading.Thread(target=lambda: messanger.start())
                 messanger_thread.daemon = True
                 messanger_thread.start()

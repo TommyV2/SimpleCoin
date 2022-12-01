@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import threading
@@ -6,6 +7,7 @@ import requests
 from flask import Flask, request
 
 import wallet_client.wallet as wallet_client
+import miner as miner_client
 
 from miner import Miner, start_mining_instance
 
@@ -14,6 +16,7 @@ PORT = 0
 public_keys_list = []
 transaction_pool = []
 miner = None
+my_priv_key = ""
 
 # Server methods
 # [GET] - returns public_keys_list
@@ -83,14 +86,25 @@ def message():
 @node.route("/update_transaction_pool", methods=["GET", "POST", "DELETE"])
 def update_transaction_pool():
     global transaction_pool
+    global my_priv_key
     if request.method == "GET":
         return {"transaction_pool": transaction_pool}
     if request.method == "POST":
         params = request.get_json()
-        message = params["message"]
-        print("New message in the transaction pool")
-        transaction_pool.append(message)
-        return "Ok", 200
+        transaction = params["transaction"]
+        
+        transaction_json= json.loads(transaction)
+        saved_transactions = miner_client.get_saved_transactions(PORT)
+        if not wallet_client.validate_new_transaction(saved_transactions ,transaction_json, PORT): 
+            return "Wrong transaction", 404
+        # elif not wallet_client.validate_signature( # TODO: nie dziala
+        #     transaction_json["sender"], my_priv_key, transaction_json
+        # ):
+        #     return "Wrong signature", 404
+        else:
+            print("New message in the transaction pool")
+            transaction_pool.append(transaction)
+            return "OK", 200
     if request.method == "DELETE":
         transaction_pool = []
         return "", 204

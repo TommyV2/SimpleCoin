@@ -21,10 +21,11 @@ class Miner:
         self.last_mined = 0
         self.blockchain = get_blockchain(port)
 
-
     # Create genesis block (1st block of a blockchain)
     def create_genesis_block(self):
-        return Block(index=0, data="genesis", nonce=0, previous_hash="0")
+        return Block(index=0, data=[{"sender": "COINBASE", "receiver": "/8zF7t8B4eaqrq+4LZO21El/CwcMCXGBjT1BJnyEpp5rY3MTPsEqwBsEtAkCfJxYy6iYFDcIr3BnPPgWo+ULxw==", "amount": 1000}, 
+        {"sender": "COINBASE", "receiver": "uIbTvhooA1SdQcZtbNXAi5Ww+Jf7+TlnwuZM/Nniic0CZ4Ifdpnher8sIhHmnUzKKDsYmN30B5gQ3CTKHCpDug==", "amount": 1000},
+        {"sender": "COINBASE", "receiver": "ZBmxoiQF5tH+oQK0UOVvTHKBEFAM4CYw+T4AgZNd/MSsX1jozOpITHXcFf/Rejqh3zqFWv83NFYZArAW57lBZQ==", "amount": 1000}], nonce=0, previous_hash="0")
 
 
     # Save Blockchain to a file 
@@ -83,7 +84,11 @@ class Miner:
         res = requests.get(url)
         data = res.json()
         transaction_pool = data["transaction_pool"]
-        return transaction_pool
+        parsed_transaction_pool = []
+        for t in transaction_pool:
+            parsed_t = json.loads(t)
+            parsed_transaction_pool.append(parsed_t)
+        return parsed_transaction_pool
 
 
     # Clear transaction pool
@@ -158,9 +163,10 @@ class Miner:
             while not self.get_transaction_pool():
                 time.sleep(5)
             transaction_pool = self.get_transaction_pool()
-            data = str(transaction_pool)
+            data_string = str(transaction_pool)
+            data = transaction_pool
             self.pop_transaction_pool()
-            new_block = data + previous_hash
+            new_block = data_string + previous_hash
             # find a valid nonce for the new block
             (hash_result, nonce) = self.proof_of_work(new_block, difficulty_bits)
             if self.mining == False:
@@ -170,7 +176,7 @@ class Miner:
             is_valid = self.notify_other_nodes(new_block)
             if is_valid: #and self.mining:
                 self.restart = True
-                self.add_new_block_to_the_blockchain(new_block.describe(), mined_by_me = True)
+                self.add_new_block_to_the_blockchain(new_block.describe(), mined_by_me = True) 
             else:
                 self.restart = False
             self.mining = False          
@@ -206,6 +212,20 @@ def get_blockchain(port):
         return blockchain
     except:
         return False
+
+# Get all transactions saved on a blockchain
+def get_saved_transactions(port):
+    try:
+        blockchain = get_blockchain(port)
+        all_transactions = []
+        for block in blockchain:
+            block_transactions = block["data"]
+            for transaction in block_transactions:
+                print(transaction)
+                all_transactions.append(transaction)
+        return all_transactions
+    except:
+        return []
 
 
 # Check if blockchain is valid
