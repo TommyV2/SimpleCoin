@@ -13,8 +13,9 @@ init(convert=True)
 
 
 class Miner:
-    def __init__(self, port, known_hosts):
+    def __init__(self, port, pub_key, known_hosts):
         self.port = port
+        self.pub_key = pub_key
         self.known_hosts = known_hosts
         self.mining = False
         self.restart = False
@@ -68,8 +69,11 @@ class Miner:
             time.sleep(random_delay_time)
 
     def request_payout(self):
-        # TODO send request to endpoint in node
-        print("Success")
+        requester = self.pub_key
+        url = f"http://localhost:{requester}/update_transaction_pool"
+        payload = {"requester": requester}
+        headers = {"Content-Type": "application/json"}
+        requests.post(url, json=payload, headers=headers)
 
     # Add candidate block to the blockchain
     def add_new_block_to_the_blockchain(self, block, mined_by_me):
@@ -82,7 +86,6 @@ class Miner:
         self.last_mined = time.time()
         if mined_by_me:
             print(f"{Fore.GREEN}Node {self.port} mined a new block!{Style.RESET_ALL}")
-            self.request_payout()
 
     # Calculate pow for the candidate block
     def proof_of_work(self, header, difficulty_bits):
@@ -202,6 +205,7 @@ class Miner:
                 self.add_new_block_to_the_blockchain(
                     new_block.describe(), mined_by_me=True
                 )
+                self.request_payout()
             else:
                 self.restart = False
             self.mining = False
@@ -252,6 +256,21 @@ def get_saved_transactions(port):
         return all_transactions
     except:
         return []
+
+
+def get_current_balance(port):
+    try:
+        blockchain = get_blockchain(port)
+        all_transactions = []
+        for block in blockchain:
+            block_transactions = block["data"]
+            for transaction in block_transactions:
+                print(transaction)
+                all_transactions.append(transaction)
+                balance = 0
+        return balance
+    except:
+        return 0
 
 
 # Check if blockchain is valid

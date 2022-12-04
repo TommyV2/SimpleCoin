@@ -31,13 +31,25 @@ def fee_pool():
         return {"fee pool left": fee_pool}
     elif request.method == "POST":
         params = request.get_json()
-        fee_pool = fee_pool + update_fee_pool(
-            fee_pool, params("action"), params("amount")
-        )
-        print(
-            f"Updating remaining fee pool {params('action')}, remaining fees {fee_pool}"
-        )
-        return "Ok", 200
+        if params("action") == "SET":
+            if fee_pool == params("amount"):
+                print(f"fee_pool amount up to date, remaining feed {fee_pool}")
+            else:
+                fee_pool = params("amount")
+                print(
+                    f"Updating remaining fee pool {params('action')}, remaining fees {fee_pool}"
+                )
+                return "Ok", 200
+        else:
+            fee_pool = fee_pool + update_fee_pool(
+                fee_pool,
+                params("action"),
+                params("amount"),
+            )
+            print(
+                f"Updating remaining fee pool {params('action')}, remaining fees {fee_pool}"
+            )
+            return "Ok", 200
 
 
 # Server methods
@@ -104,23 +116,25 @@ def message():
             return "Bad signature", 404
 
 
-@node.route("/request_payout", methods=["GET"])
+@node.route("/request_payout", methods=["POST"])
 def request_payout():
-    if request.method == "GET":
-        last_transaction_sender = "something"  # todo
+    if request.method == "POST":
         params = request.get_json()
-        if params["requester"] == last_transaction_sender:
-            global flat_payout
-            global fee
-            add_from_fee_pool = get_fee_amount()  # TODO
-            transaction = {
-                "sender": "COINBASE",
-                "receiver": params["requester"],
-                "amount": flat_payout + add_from_fee_pool,
-                "fee": fee,
-                "receiver's change": flat_payout + add_from_fee_pool - fee,
-            }
-            update_transaction_pool(transaction)
+        global flat_payout
+        global fee
+        add_from_fee_pool = get_fee_amount()
+        transaction_body = {
+            "message": "Payout for mining",
+            "sender": "COINBASE",
+            "receiver": params["requester"],
+            "amount": flat_payout + add_from_fee_pool,
+            "fee": fee,
+            "receiver's change": flat_payout + add_from_fee_pool - fee,
+        }
+        payload = {"transaction": transaction_body}
+        url = f"http://localhost:{PORT}/update_transaction_pool"
+        headers = {"Content-Type": "application/json"}
+        requests.post(url, json=payload, headers=headers)
 
 
 # [POST] - update transaction pool
@@ -133,17 +147,16 @@ def update_transaction_pool():
     if request.method == "POST":
         params = request.get_json()
         transaction = params["transaction"]
-
         transaction_json = json.loads(transaction)
         saved_transactions = miner_client.get_saved_transactions(PORT)
         if not wallet_client.validate_new_transaction(
             saved_transactions, transaction_json, PORT
         ):
             return "Wrong transaction", 404
-        # elif not wallet_client.validate_signature( # TODO: nie dziala
-        #     transaction_json["sender"], my_priv_key, transaction_json
-        # ):
-        #     return "Wrong signature", 404
+        elif not wallet_client.validate_signature(  # TODO: nie dziala
+            transaction_json["sender"], my_priv_key, transaction_json["message"]
+        ):
+            return "Wrong signature", 404
         else:
             print("New message in the transaction pool")
             transaction_pool.append(transaction)
@@ -151,6 +164,13 @@ def update_transaction_pool():
     if request.method == "DELETE":
         transaction_pool = []
         return "", 204
+
+
+@node.route("/balance", methods=["GET"])
+def balance():
+    if request.method == "GET":
+        balance = miner_client.get_current_balance(PORT)
+        return {"Balance": balance}
 
 
 # [POST] - validate_candidate_block
@@ -169,8 +189,10 @@ def validate():
 
 
 def get_fee_amount():
-    # TODO
-    fee_amount = 0
+    res = requests.get(url)
+    data = res.json()
+    print(data["fee pool left"])
+    fee_amount = (-1) * update_fee_pool(data["fee pool left"], "PAYOUT", "")
     return fee_amount
 
 
@@ -185,7 +207,7 @@ def add_pub_key_to_the_list(host, pub_key):
 
 def update_fee_pool(fee_pool, action, amount):
     update = 0
-    if action == "PAY":
+    if action == "PAYOUT":
         update = (-1) * fee_pool * 0.1
     elif action == "RECIEVE":
         update = amount
@@ -220,7 +242,7 @@ if __name__ == "__main__":
         headers = {"Content-Type": "application/json"}
         requests.post(url, json=payload, headers=headers)
 
-    miner = Miner(PORT, ["5001", "5002", "5003"])
+    miner = Miner(PORT, pub_key=my_priv_key, known_hosts=["5001", "5002", "5003"])
     # Start server
     print("=========================================")
     print(f"Running Node on port: {PORT}")

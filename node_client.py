@@ -1,6 +1,7 @@
 import base64
 import sys
 import threading
+from datetime import datetime
 
 import ecdsa
 import requests
@@ -91,24 +92,53 @@ class NodeClient:
         headers = {"Content-Type": "application/json"}
         requests.post(url, json=payload, headers=headers)
 
-    def send_transaction(self, destination_key, amount):
+    def send_transaction(
+        self, current_active_nodes_ports, message, destination_key, amount
+    ):
         private_key = self.wallet.key_load(NODE_PORT, "enc_priv_key")
+        pub_key = self.wallet.key_load(NODE_PORT, "pub_key")
         my_key_list = dict(self.pub_list)
-        destination_port = 0
-        if my_key_list[destination_key]:
-            transaction = msg.create_transaction_body(amount, destination_key)
-            payload = transaction
-            headers = {"Content-Type": "application/json"}
+        for (
+            miner_port,
+            key,
+        ) in (
+            my_key_list.items()
+        ):  # for name, age in dictionary.iteritems():  (for Python 2.x)
+            if key == destination_key:
+                date_time = datetime.now()
+                signature, message = self.sign_ECDSA_msg(private_key.decode(), message)
+                encoded_signature = signature.decode()
+                amount = float(amount)
+                transaction_body = {
+                    "message": message,
+                    "signature": encoded_signature,
+                    "amount": amount,
+                    "receiver's change": amount - 0.05,
+                    "sender": pub_key,
+                    "receiver": destination_key,
+                    "fee": 0.05,
+                    "timestamp": str(date_time),
+                }
+                payload = {"transaction": transaction_body}
+                headers = {"Content-Type": "application/json"}
 
-            for port in self.ports:
-                url = f"http://localhost:{port}/update_transaction_pool"
-                requests.post(url, json=payload, headers=headers)
-                res = requests.post(url, json=payload, headers=headers)
-                print("=========================================")
-                print(res.text)
-                print("=========================================")
-        else:
-            print(f"Unknown target{destination_key}. Transaction will not be sent")
+                for port in current_active_nodes_ports:
+                    url = f"http://localhost:{port}/update_transaction_pool"
+                    requests.post(url, json=payload, headers=headers)
+                    res = requests.post(url, json=payload, headers=headers)
+                    print("=========================================")
+                    print(res.text)
+                    print("=========================================")
+
+    def match_pub_key_to_port(self, public_key):
+        tuple_list = self.pub_list
+        pub_dict = dict((pub_key, port) for port, pub_key in tuple_list)
+        try:
+            port = pub_dict[public_key]
+            return port
+        except:
+            print("No such Public key in known hosts list")
+            return 0
 
     # Print public key list
     def print_pub_list(self):
@@ -137,10 +167,17 @@ class NodeClient:
         signature = base64.b64encode(signature_key.sign(bmessage))
         return signature, message
 
-    def get_balance(self, destination_key):
-        balance = 0
-        # TODO add function that will count blockchain balacnce for provided destination key
-        return balance
+    def get_balance(self, destination_port):
+        if destination_port == 0:
+            pass
+        else:
+            balance = 0
+            url = f"http://localhost:{destination_port}/balance"
+            res = requests.get(url)
+            data = res.json()
+            print(data)
+            print(f"Current balance is {data[balance]}")
+            return balance
 
     # Main program loop
     def run_client(self):
@@ -163,7 +200,7 @@ class NodeClient:
             a. Start mining on all nodes
             q. Stop mining on all nodes
             b. Send coins to target
-            c. show balance on one node
+            c. Show balance on one node
             """
             )
         if key_input == "0":
@@ -235,14 +272,17 @@ class NodeClient:
             print("=========================================")
             destination_key = input("Provide destination key: ")
             amount = input("Specify Amount of coins: ")
+            message = input("Message: ")
             print("=========================================")
             print("...")
-            self.send_transaction(destination_key, amount)
+            self.send_transaction(
+                current_active_nodes_ports, message, destination_key, amount
+            )
             self.run_client()
         elif key_input == "c":
             destination_key = input("Provide destination key: ")
-            balance = self.get_balance(destination_key)
-            print(f"Current balance is {balance}")
+            port = self.match_pub_key_to_port(destination_key)
+            self.get_balance(port)
             self.run_client()
 
 
