@@ -258,7 +258,7 @@ def get_saved_transactions(port):
         return []
 
 
-def get_current_balance(port):
+def get_current_balance(port): #TODO
     try:
         blockchain = get_blockchain(port)
         all_transactions = []
