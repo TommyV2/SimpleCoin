@@ -16,7 +16,7 @@ public_keys_list = []
 transaction_pool = []
 miner = None
 my_priv_key = ""
-fee_pool = 0
+fee_pool_amount = 0
 flat_payout = 150
 fee = 0.05
 
@@ -26,28 +26,28 @@ fee = 0.05
 # [POST] - updates amount remaining in fee_pool
 @node.route("/fee_pool", methods=["GET", "POST"])
 def fee_pool():
-    global fee_pool
+    global fee_pool_amount
     if request.method == "GET":
-        return {"fee pool left": fee_pool}
+        return {"fee pool left": fee_pool_amount}
     elif request.method == "POST":
         params = request.get_json()
-        if params("action") == "SET":
-            if fee_pool == params("amount"):
-                print(f"fee_pool amount up to date, remaining feed {fee_pool}")
+        if params["action"] == "SET":
+            if fee_pool_amount == params["amount"]:
+                print(f"fee_pool amount up to date, remaining fees {fee_pool_amount}")
             else:
-                fee_pool = params("amount")
+                fee_pool_amount = params["amount"]
                 print(
-                    f"Updating remaining fee pool {params('action')}, remaining fees {fee_pool}"
+                    f"Updating remaining fee pool {params['action']}, remaining fees {fee_pool_amount}"
                 )
                 return "Ok", 200
         else:
-            fee_pool = fee_pool + update_fee_pool(
-                fee_pool,
-                params("action"),
-                params("amount"),
+            fee_pool_amount = fee_pool_amount + update_fee_pool(
+                fee_pool_amount,
+                params["action"],
+                params["amount"],
             )
             print(
-                f"Updating remaining fee pool {params('action')}, remaining fees {fee_pool}"
+                f"Updating remaining fee pool {params['action']}, remaining fees {fee_pool_amount}"
             )
             return "Ok", 200
 
@@ -123,6 +123,9 @@ def request_payout():
         global flat_payout
         global fee
         add_from_fee_pool = get_fee_amount()
+        print("*****************88")
+        print(add_from_fee_pool)
+        print("*****************88")
         transaction_body = {
             "message": "Payout for mining",
             "sender": "COINBASE",
@@ -135,6 +138,7 @@ def request_payout():
         url = f"http://localhost:{PORT}/update_transaction_pool"
         headers = {"Content-Type": "application/json"}
         requests.post(url, json=payload, headers=headers)
+        return "OK", 200
 
 
 # [POST] - update transaction pool
@@ -147,7 +151,11 @@ def update_transaction_pool():
     if request.method == "POST":
         params = request.get_json()
         transaction = params["transaction"]
-        transaction_json = json.loads(transaction)
+        transaction_json = None
+        try:
+            transaction_json = json.loads(transaction)
+        except:
+            transaction_json = transaction
         saved_transactions = miner_client.get_saved_transactions(PORT)
         if not wallet_client.validate_new_transaction(
             saved_transactions, transaction_json, PORT
@@ -190,11 +198,11 @@ def validate():
 
 
 def get_fee_amount():
-    res = requests.get(url)
-    data = res.json()
-    print(data["fee pool left"])
-    fee_amount = (-1) * update_fee_pool(data["fee pool left"], "PAYOUT", "")
-    return fee_amount
+    global fee_pool_amount
+    # res = requests.get(url)
+    # data = res.json()
+    fee_amount = (-1) * update_fee_pool(fee_pool_amount, "PAYOUT", "")
+    return fee_pool_amount
 
 
 # Add new public key to the public_keys_list
@@ -206,14 +214,14 @@ def add_pub_key_to_the_list(host, pub_key):
     public_keys_list.append((host, pub_key))
 
 
-def update_fee_pool(fee_pool, action, amount):
+def update_fee_pool(fees, action, amount):
     update = 0
     if action == "PAYOUT":
-        update = (-1) * fee_pool * 0.1
+        update = (-1) * fees * 0.1
     elif action == "RECIEVE":
         update = amount
     else:
-        print(f"Incorrect actiong {action}")
+        print(f"Incorrect action {action}")
     return update
 
 
@@ -243,7 +251,7 @@ if __name__ == "__main__":
         headers = {"Content-Type": "application/json"}
         requests.post(url, json=payload, headers=headers)
 
-    miner = Miner(PORT, pub_key=my_priv_key, known_hosts=["5001", "5002", "5003"])
+    miner = Miner(PORT, pub_key=my_pub_key, priv_key=my_priv_key, known_hosts=["5001", "5002", "5003"])
     # Start server
     print("=========================================")
     print(f"Running Node on port: {PORT}")

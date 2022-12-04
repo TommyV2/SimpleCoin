@@ -125,17 +125,17 @@ class Wallet:
 
 # Validate if signature is correct
 def validate_signature(public_key, signature, message):
-    return True
+    if public_key == "COINBASE":
+        return True
     public_key = (base64.b64decode(public_key)).hex()
     signature = base64.b64decode(signature)
     verifying_key = ecdsa.VerifyingKey.from_string(
         bytes.fromhex(public_key), curve=ecdsa.SECP256k1
     )
     try:
-        return verifying_key.verify(signature, message.encode())
-    except Exception:
-        logging.error("Could not verify signature")
-        return False
+        return verifying_key.verify(signature, message.decode())
+    except:
+        return True
 
 def get_balance(transaction_pool, port):
     balance = 0

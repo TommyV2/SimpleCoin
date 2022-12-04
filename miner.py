@@ -13,15 +13,17 @@ init(convert=True)
 
 
 class Miner:
-    def __init__(self, port, pub_key, known_hosts):
+    def __init__(self, port, pub_key, priv_key, known_hosts):
         self.port = port
         self.pub_key = pub_key
+        self.priv_key = priv_key
         self.known_hosts = known_hosts
         self.mining = False
         self.restart = False
         self.stop_minig = False
         self.last_mined = 0
         self.blockchain = get_blockchain(port)
+        self.fee = 0.05
 
     # Create genesis block (1st block of a blockchain)
     def create_genesis_block(self):
@@ -69,12 +71,20 @@ class Miner:
             time.sleep(random_delay_time)
 
     def request_payout(self):
-        requester = self.port
-        url = f"http://localhost:{requester}/request_payout"
-        payload = {"requester": requester}
-        headers = {"Content-Type": "application/json"}
-        requests.post(url, json=payload, headers=headers)
-
+        for port in self.known_hosts:
+            requester = self.pub_key
+            url = f"http://localhost:{port}/request_payout"
+            payload = {"requester": requester}
+            headers = {"Content-Type": "application/json"}
+            requests.post(url, json=payload, headers=headers)
+    
+    def update_fee_pool(self, amount):
+        for port in self.known_hosts:
+            url = f"http://localhost:{port}/fee_pool"
+            payload = {"action": "RECIEVE", "amount": amount}
+            headers = {"Content-Type": "application/json"}
+            requests.post(url, json=payload, headers=headers)
+    
     # Add candidate block to the blockchain
     def add_new_block_to_the_blockchain(self, block, mined_by_me):
         if time.time() - self.last_mined < 5:
@@ -113,8 +123,12 @@ class Miner:
         data = res.json()
         transaction_pool = data["transaction_pool"]
         parsed_transaction_pool = []
-        for t in transaction_pool:
-            parsed_t = json.loads(t)
+        for t in transaction_pool: 
+            parsed_t = None
+            if type(t) is dict:
+                parsed_t = t
+            else:
+                parsed_t = json.loads(t)
             parsed_transaction_pool.append(parsed_t)
         return parsed_transaction_pool
 
@@ -191,6 +205,7 @@ class Miner:
             transaction_pool = self.get_transaction_pool()
             data_string = str(transaction_pool)
             data = transaction_pool
+            fees = len(data) * self.fee
             self.pop_transaction_pool()
             new_block = data_string + previous_hash
             # find a valid nonce for the new block
@@ -206,6 +221,7 @@ class Miner:
                     new_block.describe(), mined_by_me=True
                 )
                 self.request_payout()
+                self.update_fee_pool(fees)
             else:
                 self.restart = False
             self.mining = False
@@ -251,7 +267,6 @@ def get_saved_transactions(port):
         for block in blockchain:
             block_transactions = block["data"]
             for transaction in block_transactions:
-                print(transaction)
                 all_transactions.append(transaction)
         return all_transactions
     except:
@@ -265,7 +280,6 @@ def get_current_balance(port):  # TODO
         for block in blockchain:
             block_transactions = block["data"]
             for transaction in block_transactions:
-                print(transaction)
                 all_transactions.append(transaction)
                 balance = 0
         return balance

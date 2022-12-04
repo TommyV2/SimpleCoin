@@ -147,7 +147,7 @@ class NodeClient:
     # Send message from Node A to Node B
     def send_message(self, destination_port, private_key, message):
         pub_key = self.wallet.key_load(NODE_PORT, "pub_key")
-        signature, message = self.sign_ECDSA_msg(private_key, message)
+        signature, message = self.sign_ECDSA_msg(private_key.decode(), message)
         url = f"http://localhost:{destination_port}/message"
         payload = {"from": pub_key, "signature": signature.decode(), "message": message}
         headers = {"Content-Type": "application/json"}
@@ -160,6 +160,7 @@ class NodeClient:
 
     # Sign message with ECDSA key
     def sign_ECDSA_msg(self, private_key, message):
+        print(private_key)
         bmessage = message.encode()
         signature_key = ecdsa.SigningKey.from_string(
             bytes.fromhex(private_key), curve=ecdsa.SECP256k1
