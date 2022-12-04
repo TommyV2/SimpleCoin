@@ -70,11 +70,11 @@ class Miner:
             print(f"{Fore.YELLOW}DELAY: {random_delay_time}s{Style.RESET_ALL}")
             time.sleep(random_delay_time)
 
-    def request_payout(self):
+    def request_payout(self, amount):
         for port in self.known_hosts:
             requester = self.pub_key
             url = f"http://localhost:{port}/request_payout"
-            payload = {"requester": requester}
+            payload = {"requester": requester, "fees": amount}
             headers = {"Content-Type": "application/json"}
             requests.post(url, json=payload, headers=headers)
     
@@ -220,7 +220,7 @@ class Miner:
                 self.add_new_block_to_the_blockchain(
                     new_block.describe(), mined_by_me=True
                 )
-                self.request_payout()
+                self.request_payout(fees)
                 self.update_fee_pool(fees)
             else:
                 self.restart = False

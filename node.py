@@ -122,17 +122,13 @@ def request_payout():
         params = request.get_json()
         global flat_payout
         global fee
-        add_from_fee_pool = get_fee_amount()
-        print("*****************88")
-        print(add_from_fee_pool)
-        print("*****************88")
         transaction_body = {
             "message": "Payout for mining",
             "sender": "COINBASE",
             "receiver": params["requester"],
-            "amount": flat_payout + add_from_fee_pool,
+            "amount": flat_payout + params["fees"],
             "fee": fee,
-            "receiver's change": flat_payout + add_from_fee_pool - fee,
+            "receiver_change": flat_payout + params["fees"] - fee,
         }
         payload = {"transaction": transaction_body}
         url = f"http://localhost:{PORT}/update_transaction_pool"

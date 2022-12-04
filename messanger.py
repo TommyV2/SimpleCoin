@@ -33,7 +33,7 @@ class Messanger:
     # Start sending messages
     def start(self):
         while True:
-            random_interval = random.randint(4, 10)
+            random_interval = random.randint(10, 20)
             time.sleep(random_interval)
             self.add_message_to_the_transaction_pool()
 
