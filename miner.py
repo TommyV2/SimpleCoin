@@ -70,7 +70,7 @@ class Miner:
 
     def request_payout(self):
         requester = self.pub_key
-        url = f"http://localhost:{requester}/update_transaction_pool"
+        url = f"http://localhost:{requester}/request_payout"
         payload = {"requester": requester}
         headers = {"Content-Type": "application/json"}
         requests.post(url, json=payload, headers=headers)
@@ -258,7 +258,7 @@ def get_saved_transactions(port):
         return []
 
 
-def get_current_balance(port): #TODO
+def get_current_balance(port):  # TODO
     try:
         blockchain = get_blockchain(port)
         all_transactions = []
