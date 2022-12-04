@@ -1,8 +1,9 @@
 import json
 import random
 import time
-import requests
 from datetime import datetime
+
+import requests
 
 
 class Messanger:
@@ -11,18 +12,16 @@ class Messanger:
         self.ports = ports  # all known hosts
         self.my_key = my_key
         self.public_keys = public_keys
+        self.fee = 0.05
 
     # Adding random transaction to the transaction pool
     def add_message_to_the_transaction_pool(self):
-        random_amount= random.randint(1, 100)
+        random_amount = random.randint(1, 100)
         receiver_address = self.my_key
         while receiver_address == self.my_key:
-            random_receiver_index= random.randint(0, len(self.public_keys)-1)
+            random_receiver_index = random.randint(0, len(self.public_keys) - 1)
             receiver_address = self.public_keys[random_receiver_index]
-        time_stamp = time.time()
-        date_time = datetime.now()
-        encoded_signature = self.signature.decode()
-        transaction = {"signature": encoded_signature, "amount": random_amount, "sender": self.my_key, "receiver": receiver_address, "timestamp": str(date_time)}
+        transaction = self.create_transaction_body(random_amount, receiver_address)
         transaction_json = json.dumps(transaction)
         payload = {"transaction": transaction_json}
         headers = {"Content-Type": "application/json"}
@@ -37,3 +36,17 @@ class Messanger:
             random_interval = random.randint(4, 10)
             time.sleep(random_interval)
             self.add_message_to_the_transaction_pool()
+
+    def create_transaction_body(self, amount, receiver_address):
+        date_time = datetime.now()
+        encoded_signature = self.signature.decode()
+        transaction_body = {
+            "signature": encoded_signature,
+            "amount": amount,
+            "receiver's change": amount - self.fee,
+            "sender": self.my_key,
+            "receiver": receiver_address,
+            "fee": self.fee,
+            "timestamp": str(date_time),
+        }
+        return transaction_body

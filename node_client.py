@@ -26,7 +26,9 @@ class NodeClient:
             "8",
             "9",
             "a",
-            "q"
+            "q",
+            "b",
+            "c",
         ]  # Add more options when needed
         self.pub_list = []
         self.wallet = Wallet(port)  # Connect to the wallet of chosen Node
@@ -70,10 +72,7 @@ class NodeClient:
     # Start mining on chosen Node
     def start_mining(self, destination_port):
         url = f"http://localhost:{destination_port}/mining"
-        payload = {
-            "mining": "True",
-            "stop": "False"
-        }
+        payload = {"mining": "True", "stop": "False"}
         headers = {"Content-Type": "application/json"}
         requests.post(url, json=payload, headers=headers)
 
@@ -84,16 +83,32 @@ class NodeClient:
             self.start_mining(port)
         current_active_nodes_ports = [item[0] for item in self.pub_list]
         return current_active_nodes_ports
-    
+
     # Stop mining on chosen Node
     def stop_mining(self, destination_port):
         url = f"http://localhost:{destination_port}/mining"
-        payload = {
-            "mining": "False",
-            "stop": "True"
-        }
+        payload = {"mining": "False", "stop": "True"}
         headers = {"Content-Type": "application/json"}
         requests.post(url, json=payload, headers=headers)
+
+    def send_transaction(self, destination_key, amount):
+        private_key = self.wallet.key_load(NODE_PORT, "enc_priv_key")
+        my_key_list = dict(self.pub_list)
+        destination_port = 0
+        if my_key_list[destination_key]:
+            transaction = msg.create_transaction_body(amount, destination_key)
+            payload = transaction
+            headers = {"Content-Type": "application/json"}
+
+            for port in self.ports:
+                url = f"http://localhost:{port}/update_transaction_pool"
+                requests.post(url, json=payload, headers=headers)
+                res = requests.post(url, json=payload, headers=headers)
+                print("=========================================")
+                print(res.text)
+                print("=========================================")
+        else:
+            print(f"Unknown target{destination_key}. Transaction will not be sent")
 
     # Print public key list
     def print_pub_list(self):
@@ -122,6 +137,11 @@ class NodeClient:
         signature = base64.b64encode(signature_key.sign(bmessage))
         return signature, message
 
+    def get_balance(self, destination_key):
+        balance = 0
+        # TODO add function that will count blockchain balacnce for provided destination key
+        return balance
+
     # Main program loop
     def run_client(self):
         key_input = None
@@ -142,6 +162,8 @@ class NodeClient:
             9. Start mining on one node
             a. Start mining on all nodes
             q. Stop mining on all nodes
+            b. Send coins to target
+            c. show balance on one node
             """
             )
         if key_input == "0":
@@ -175,7 +197,9 @@ class NodeClient:
         elif key_input == "7":
             destination_port = input("Provide port: ")
             if miner.get_blockchain(destination_port):
-                print(miner.is_valid_blockchain(miner.get_blockchain(destination_port))[1])
+                print(
+                    miner.is_valid_blockchain(miner.get_blockchain(destination_port))[1]
+                )
             else:
                 print("No blockchain created yet")
             self.run_client()
@@ -184,7 +208,12 @@ class NodeClient:
             for port in current_active_nodes_ports:
                 priv_key = self.wallet.key_load(port, "enc_priv_key")
                 pub_key = self.wallet.key_load(port, "pub_key")
-                messanger = msg.Messanger(priv_key, current_active_nodes_ports, pub_key, current_active_nodes_keys)
+                messanger = msg.Messanger(
+                    priv_key,
+                    current_active_nodes_ports,
+                    pub_key,
+                    current_active_nodes_keys,
+                )
                 messanger_thread = threading.Thread(target=lambda: messanger.start())
                 messanger_thread.daemon = True
                 messanger_thread.start()
@@ -201,6 +230,19 @@ class NodeClient:
         elif key_input == "q":
             for port in current_active_nodes_ports:
                 self.stop_mining(port)
+            self.run_client()
+        elif key_input == "b":
+            print("=========================================")
+            destination_key = input("Provide destination key: ")
+            amount = input("Specify Amount of coins: ")
+            print("=========================================")
+            print("...")
+            self.send_transaction(destination_key, amount)
+            self.run_client()
+        elif key_input == "c":
+            destination_key = input("Provide destination key: ")
+            balance = self.get_balance(destination_key)
+            print(f"Current balance is {balance}")
             self.run_client()
 
 

@@ -6,9 +6,8 @@ import threading
 import requests
 from flask import Flask, request
 
-import wallet_client.wallet as wallet_client
 import miner as miner_client
-
+import wallet_client.wallet as wallet_client
 from miner import Miner, start_mining_instance
 
 node = Flask(__name__)
@@ -17,6 +16,29 @@ public_keys_list = []
 transaction_pool = []
 miner = None
 my_priv_key = ""
+fee_pool = 0
+flat_payout = 150
+fee = 0.05
+
+
+# Server methods
+# [GET] - returns remaining fee_pool amount
+# [POST] - updates amount remaining in fee_pool
+@node.route("/fee_pool", methods=["GET", "POST"])
+def fee_pool():
+    global fee_pool
+    if request.method == "GET":
+        return {"fee pool left": fee_pool}
+    elif request.method == "POST":
+        params = request.get_json()
+        fee_pool = fee_pool + update_fee_pool(
+            fee_pool, params("action"), params("amount")
+        )
+        print(
+            f"Updating remaining fee pool {params('action')}, remaining fees {fee_pool}"
+        )
+        return "Ok", 200
+
 
 # Server methods
 # [GET] - returns public_keys_list
@@ -82,6 +104,25 @@ def message():
             return "Bad signature", 404
 
 
+@node.route("/request_payout", methods=["GET"])
+def request_payout():
+    if request.method == "GET":
+        last_transaction_sender = "something"  # todo
+        params = request.get_json()
+        if params["requester"] == last_transaction_sender:
+            global flat_payout
+            global fee
+            add_from_fee_pool = get_fee_amount()  # TODO
+            transaction = {
+                "sender": "COINBASE",
+                "receiver": params["requester"],
+                "amount": flat_payout + add_from_fee_pool,
+                "fee": fee,
+                "receiver's change": flat_payout + add_from_fee_pool - fee,
+            }
+            update_transaction_pool(transaction)
+
+
 # [POST] - update transaction pool
 @node.route("/update_transaction_pool", methods=["GET", "POST", "DELETE"])
 def update_transaction_pool():
@@ -92,10 +133,12 @@ def update_transaction_pool():
     if request.method == "POST":
         params = request.get_json()
         transaction = params["transaction"]
-        
-        transaction_json= json.loads(transaction)
+
+        transaction_json = json.loads(transaction)
         saved_transactions = miner_client.get_saved_transactions(PORT)
-        if not wallet_client.validate_new_transaction(saved_transactions ,transaction_json, PORT): 
+        if not wallet_client.validate_new_transaction(
+            saved_transactions, transaction_json, PORT
+        ):
             return "Wrong transaction", 404
         # elif not wallet_client.validate_signature( # TODO: nie dziala
         #     transaction_json["sender"], my_priv_key, transaction_json
@@ -119,12 +162,16 @@ def validate():
         is_valid = miner.verify_candidate_block(candidate_block)
 
         if is_valid:
-            miner.add_new_block_to_the_blockchain(candidate_block, mined_by_me = False)
+            miner.add_new_block_to_the_blockchain(candidate_block, mined_by_me=False)
             return "Ok", 200
         else:
             return "Bad candidate block", 404
-        
 
+
+def get_fee_amount():
+    # TODO
+    fee_amount = 0
+    return fee_amount
 
 
 # Add new public key to the public_keys_list
@@ -134,6 +181,17 @@ def add_pub_key_to_the_list(host, pub_key):
         if port == host:
             return
     public_keys_list.append((host, pub_key))
+
+
+def update_fee_pool(fee_pool, action, amount):
+    update = 0
+    if action == "PAY":
+        update = (-1) * fee_pool * 0.1
+    elif action == "RECIEVE":
+        update = amount
+    else:
+        print(f"Incorrect actiong {action}")
+    return update
 
 
 if __name__ == "__main__":
