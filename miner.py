@@ -33,21 +33,21 @@ class Miner:
                     "receiver": "/8zF7t8B4eaqrq+4LZO21El/CwcMCXGBjT1BJnyEpp5rY3MTPsEqwBsEtAkCfJxYy6iYFDcIr3BnPPgWo+ULxw==",
                     "amount": 1000,
                     "fee": 0.05,
-                    "receiver's change": 999.95,
+                    "receiver_change": 999.95,
                 },
                 {
                     "sender": "COINBASE",
                     "receiver": "uIbTvhooA1SdQcZtbNXAi5Ww+Jf7+TlnwuZM/Nniic0CZ4Ifdpnher8sIhHmnUzKKDsYmN30B5gQ3CTKHCpDug==",
                     "amount": 1000,
                     "fee": 0.05,
-                    "receiver's change": 999.95,
+                    "receiver_change": 999.95,
                 },
                 {
                     "sender": "COINBASE",
                     "receiver": "ZBmxoiQF5tH+oQK0UOVvTHKBEFAM4CYw+T4AgZNd/MSsX1jozOpITHXcFf/Rejqh3zqFWv83NFYZArAW57lBZQ==",
                     "amount": 1000,
                     "fee": 0.05,
-                    "receiver's change": 999.95,
+                    "receiver_change": 999.95,
                 },
             ],
             nonce=0,
@@ -69,7 +69,7 @@ class Miner:
             time.sleep(random_delay_time)
 
     def request_payout(self):
-        requester = self.pub_key
+        requester = self.port
         url = f"http://localhost:{requester}/request_payout"
         payload = {"requester": requester}
         headers = {"Content-Type": "application/json"}

@@ -43,7 +43,7 @@ class Messanger:
         transaction_body = {
             "signature": encoded_signature,
             "amount": amount,
-            "receiver's change": amount - self.fee,
+            "receiver_change": amount - self.fee,
             "sender": self.my_key,
             "receiver": receiver_address,
             "fee": self.fee,

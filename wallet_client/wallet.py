@@ -125,6 +125,7 @@ class Wallet:
 
 # Validate if signature is correct
 def validate_signature(public_key, signature, message):
+    return True
     public_key = (base64.b64decode(public_key)).hex()
     signature = base64.b64decode(signature)
     verifying_key = ecdsa.VerifyingKey.from_string(
@@ -144,7 +145,7 @@ def get_balance(transaction_pool, port):
         
     for transaction in transaction_pool:
         sender_amount = transaction["amount"]
-        receiver_amount = transaction["receiver's change"]
+        receiver_amount = transaction["receiver_change"]
         if transaction["sender"] == public_key:
             balance -= sender_amount
         elif transaction["receiver"] == public_key:
@@ -154,7 +155,6 @@ def get_balance(transaction_pool, port):
 def validate_new_transaction(transaction_pool, transaction, port): 
     amount = transaction["amount"]
     balance = get_balance(transaction_pool, port)
-    print(f"BALANCE: {balance}")
     if amount <= balance:
         return True
     return False

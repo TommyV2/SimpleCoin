@@ -113,7 +113,7 @@ class NodeClient:
                     "message": message,
                     "signature": encoded_signature,
                     "amount": amount,
-                    "receiver's change": amount - 0.05,
+                    "receiver_change": amount - 0.05,
                     "sender": pub_key,
                     "receiver": destination_key,
                     "fee": 0.05,
@@ -279,8 +279,7 @@ class NodeClient:
             )
             self.run_client()
         elif key_input == "c":
-            destination_key = input("Provide destination key: ")
-            port = self.match_pub_key_to_port(destination_key)
+            port = input("Provide destination port: ")
             self.get_balance(port)
             self.run_client()
 

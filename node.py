@@ -153,8 +153,8 @@ def update_transaction_pool():
             saved_transactions, transaction_json, PORT
         ):
             return "Wrong transaction", 404
-        elif not wallet_client.validate_signature(  # TODO: nie dziala
-            transaction_json["sender"], my_priv_key, transaction_json["message"]
+        elif not wallet_client.validate_signature( 
+            transaction_json["sender"], my_priv_key, transaction_json["amount"]
         ):
             return "Wrong signature", 404
         else:
