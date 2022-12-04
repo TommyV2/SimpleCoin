@@ -169,7 +169,8 @@ def update_transaction_pool():
 @node.route("/balance", methods=["GET"])
 def balance():
     if request.method == "GET":
-        balance = miner_client.get_current_balance(PORT)
+        saved_transactions = miner_client.get_saved_transactions(PORT)
+        balance = wallet_client.get_balance(saved_transactions,PORT)
         return {"Balance": balance}
 
 

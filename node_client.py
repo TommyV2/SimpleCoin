@@ -175,8 +175,7 @@ class NodeClient:
             url = f"http://localhost:{destination_port}/balance"
             res = requests.get(url)
             data = res.json()
-            print(data)
-            print(f"Current balance is {data[balance]}")
+            print(f"Current balance is {data['Balance']}")
             return balance
 
     # Main program loop

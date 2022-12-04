@@ -143,11 +143,12 @@ def get_balance(transaction_pool, port):
         public_key = mykey.read()
         
     for transaction in transaction_pool:
-        amount = transaction["amount"]
+        sender_amount = transaction["amount"]
+        receiver_amount = transaction["receiver's change"]
         if transaction["sender"] == public_key:
-            balance -= amount
+            balance -= sender_amount
         elif transaction["receiver"] == public_key:
-            balance += amount
+            balance += receiver_amount
     return balance
 
 def validate_new_transaction(transaction_pool, transaction, port): 
