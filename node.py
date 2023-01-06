@@ -184,10 +184,16 @@ def validate():
     if request.method == "POST":
         params = request.get_json()
         candidate_block = params["candidate_block"]
-        is_valid = miner.verify_candidate_block(candidate_block)
-
+        (is_valid, is_orphan)= miner.verify_candidate_block(candidate_block)
+        # SPRINT 4 if it is orphan, adding to orphan list
         if is_valid:
+            if is_orphan:
+                miner.add_new_block_to_the_orphan_list(candidate_block, mined_by_me=False)
+                return "Ok - Orphan", 200
             miner.add_new_block_to_the_blockchain(candidate_block, mined_by_me=False)
+            #SPRINT 4 - after adding new block we need to check if is is an orphan parent
+            miner.handle_orphan_parent(candidate_block)
+
             return "Ok", 200
         else:
             return "Bad candidate block", 404

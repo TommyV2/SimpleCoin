@@ -1,8 +1,7 @@
 import hashlib
 
 class Block:
-    def __init__(self, index, data, nonce, previous_hash):
-        self.index = index
+    def __init__(self, data, nonce, previous_hash):
         self.data = data
         self.nonce = nonce
         self.previous_hash = previous_hash
@@ -21,7 +20,6 @@ class Block:
     # Get block's params in a dict
     def describe(self):
         block = {
-            "index": self.index,
             "data": self.data,
             "nonce": self.nonce,
             "previous_hash": self.previous_hash,

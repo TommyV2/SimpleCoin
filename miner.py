@@ -28,7 +28,6 @@ class Miner:
     # Create genesis block (1st block of a blockchain)
     def create_genesis_block(self):
         return Block(
-            index=0,
             data=[
                 {
                     "sender": "COINBASE",
@@ -97,6 +96,34 @@ class Miner:
         if mined_by_me:
             print(f"{Fore.GREEN}Node {self.port} mined a new block!{Style.RESET_ALL}")
 
+    # SPRINT 4 Add candidate block to the orphan list
+    def add_new_block_to_the_orphan_list(self, block, mined_by_me):
+        if time.time() - self.last_mined < 5:
+            return
+        orphan_list = get_orphan_list(self.port)
+        orphan_list.append(block)
+        with open(f"orphan{self.port}.json", "w") as f:
+            json.dump(orphan_list, f, indent=4)
+        self.last_mined = time.time()
+        if mined_by_me:
+            print(f"{Fore.GREEN}Node {self.port} mined a new block!{Style.RESET_ALL}")
+    
+    # SPRINT 4 Remove block from orphan list (it was an orphan parent)
+    def save_new_orphan_list(self, new_orphan_list):
+        with open(f"orphan{self.port}.json", "w") as f:
+            json.dump(new_orphan_list, f, indent=4)   
+
+    # SPRINT 4 check if block is an orphan parent
+    def handle_orphan_parent(self, newly_added_block):
+        orphan_list = get_orphan_list(self.port)
+        new_orphan_list = orphan_list
+        for idx, orphan in enumerate(orphan_list):
+            if orphan["previous_hash"] == newly_added_block["hash"]:
+                self.add_new_block_to_the_blockchain(orphan, False)
+                new_orphan_list = new_orphan_list.pop(idx)
+                self.save_new_orphan_list(new_orphan_list)
+                break
+
     # Calculate pow for the candidate block
     def proof_of_work(self, header, difficulty_bits):
         # calculate the difficulty target
@@ -139,36 +166,42 @@ class Miner:
 
     # Verify candidate block
     def verify_candidate_block(self, candidate_block):
-        previous_block = get_blockchain(self.port)[-1]
-        expected_hash = candidate_block["hash"]
-        calculated_hash = hashlib.sha256(
-            str(candidate_block["data"]).encode("utf-8")
-            + str(candidate_block["nonce"]).encode("utf-8")
-            + str(candidate_block["previous_hash"]).encode("utf-8")
-        ).hexdigest()
-        if candidate_block["index"] != previous_block["index"] + 1:
-            return False
-        elif candidate_block["previous_hash"] != previous_block["hash"]:
-            return False
-        elif calculated_hash != expected_hash:
-            return False
-        else:
-            return True
+        # SPRINT 4 now I need to check if candidate block is a fork
+        all_blocks = get_blockchain(self.port)
+        is_orphan = False
+        for block in all_blocks:
+            expected_hash = candidate_block["hash"]
+            calculated_hash = hashlib.sha256(
+                str(candidate_block["data"]).encode("utf-8")
+                + str(candidate_block["nonce"]).encode("utf-8")
+                + str(candidate_block["previous_hash"]).encode("utf-8")
+            ).hexdigest()
+            if candidate_block["previous_hash"] != block["hash"]:
+                is_orphan = True 
+                break
+            elif calculated_hash != expected_hash:
+                return False, is_orphan # incorrect block
+            else:
+                continue
+        
+        return True, is_orphan
+        
 
     def notify_other_nodes(self, candidate_block):
         responses = []
         print("@@@@@@@@@@@@@@@@")
         print(self.known_hosts)
         print("@@@@@@@@@@@@@@@@")
-        for port in self.known_hosts:
-            if port == self.port:
-                continue
-            url = f"http://localhost:{port}/mining"
-            payload = {
-                "mining": "False",
-            }
-            headers = {"Content-Type": "application/json"}
-            res = requests.post(url, json=payload, headers=headers)
+        # SPRINT4 No longer stoping other nodes
+        # for port in self.known_hosts:
+        #     if port == self.port:
+        #         continue
+        #     url = f"http://localhost:{port}/mining"
+        #     payload = {
+        #         "mining": "False",
+        #     }
+        #     headers = {"Content-Type": "application/json"}
+        #     res = requests.post(url, json=payload, headers=headers)
         for port in self.known_hosts:
             if port == self.port:
                 continue
@@ -197,7 +230,6 @@ class Miner:
             start_time = time.time()
             # make a new block which includes the hash from the previous block
             previous_block = get_blockchain(self.port)[-1]
-            previous_block_index = previous_block["index"]
             previous_hash = previous_block["hash"]
 
             while not self.get_transaction_pool():
@@ -213,7 +245,7 @@ class Miner:
             if self.mining is False:
                 break
             end_time = time.time()
-            new_block = Block(previous_block_index + 1, data, nonce, previous_hash)
+            new_block = Block(data, nonce, previous_hash)
             is_valid = self.notify_other_nodes(new_block)
             if is_valid:  # and self.mining:
                 self.restart = True
@@ -258,13 +290,45 @@ def get_blockchain(port):
     except:
         return False
 
+# SPRINT 4 getting orphan list
+def get_orphan_list(port):
+    try:
+        with open(f"orphan{port}.json") as json_file:
+            orphan_list = json.load(json_file)
+
+        return orphan_list
+    except:
+        return False
+
+# SPRINT 4 calculating main chain going from the end
+def get_main_chain(blockchain):
+    main_chain = []
+    longest_chain = 0
+    for i, block in reversed(list(enumerate(blockchain))):
+        tmp_longest_chain = 0
+        tmp_main_chain = []
+        tmp_main_chain.append(block)
+        tmp_longest_chain += 1
+        for j, previous_block in reversed(list(enumerate(blockchain[0:i+1]))): 
+            if j == 0:
+                break
+            if previous_block["previous_hash"] == blockchain[j-1]["hash"]:
+                tmp_main_chain.append(blockchain[j-1])
+                tmp_longest_chain += 1
+        if tmp_longest_chain >= longest_chain:
+            longest_chain = tmp_longest_chain
+            main_chain = tmp_main_chain
+    return main_chain
+
 
 # Get all transactions saved on a blockchain
+# SPRINT 4 - getting saved transactions only from the longest chain - main one
 def get_saved_transactions(port):
     try:
         blockchain = get_blockchain(port)
+        main_chain = get_main_chain(blockchain)
         all_transactions = []
-        for block in blockchain:
+        for block in main_chain:
             block_transactions = block["data"]
             for transaction in block_transactions:
                 all_transactions.append(transaction)
@@ -273,7 +337,7 @@ def get_saved_transactions(port):
         return []
 
 
-def get_current_balance(port):  # TODO
+def get_current_balance(port): 
     try:
         blockchain = get_blockchain(port)
         all_transactions = []
@@ -286,16 +350,18 @@ def get_current_balance(port):  # TODO
     except:
         return 0
 
+# SPRINT 4 check if forks are valid
+def check_forks(blockchain, current_block_previous_hash):
+    is_valid_fork = False
+    for block in blockchain:
+        hash = block["hash"]
+        if current_block_previous_hash == hash:
+            is_valid_fork = True
+    return is_valid_fork
 
 # Check if blockchain is valid
 def is_valid_blockchain(blockchain):
     for i, block in enumerate(blockchain):
-        index = block["index"]
-        if index != i:
-            return (
-                False,
-                f"{Fore.RED}Error wrong index in block #{i}{Style.RESET_ALL}",
-            )
         expected_hash = block["hash"]
         calculated_hash = hashlib.sha256(
             str(block["data"]).encode("utf-8")
@@ -305,12 +371,13 @@ def is_valid_blockchain(blockchain):
         if calculated_hash != expected_hash:
             return (False, f"{Fore.RED}Wrong hash in block #{i}{Style.RESET_ALL}")
         if i != 0:
-            previous_hash = blockchain[i - 1]["hash"]
+            # SPRINT 4 checking validity of forks
             current_block_previous_hash = block["previous_hash"]
-            if current_block_previous_hash != previous_hash:
+            are_forks_valid = check_forks(blockchain, current_block_previous_hash)
+            if are_forks_valid == False:
                 return (
                     False,
-                    f"{Fore.RED}Previous hash of block #{i} in not equal to the hash of block #{i - 1}{Style.RESET_ALL}",
+                    f"{Fore.RED}Blockchain invalid",
                 )
     return (True, f"{Fore.GREEN}Blockchain valid{Style.RESET_ALL}")
 
