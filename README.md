@@ -19,7 +19,7 @@ Each node will use Wallet to generate and store keys on start up.
 
 ## Node client
 
-To run node client:
+To run node client: 
 
 `python node_client.py port_number` - change `port_number` to the port number of a running Node e.g. 5001
 
